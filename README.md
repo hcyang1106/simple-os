@@ -15,7 +15,7 @@ To build and run the OS on MacOS, you’ll need the following:
 | `x86_64-elf-gdb`      | Cross-debugger to connect to QEMU (used for remote debugging)       |
 | `ld`, `as`, `objcopy`, `objdump`, `readelf` | Tools for ELF analysis and binary conversion |
 
-> 💡 Installing `x86_64-elf-gcc` typically includes the full toolchain: assembler, linker, and ELF utilities.
+> Installing `x86_64-elf-gcc` typically includes the full toolchain: assembler, linker, and ELF utilities.
 
 ---
 
@@ -25,39 +25,38 @@ To build and run the OS on MacOS, you’ll need the following:
 
 - Created using `dd`
 - Uses precise sector control for:
-  - MBR (first 512 bytes)
+  - Boot (first 512 bytes)
   - Loader (second stage bootloader)
   - Kernel
 
-### Write Script: `img-write-os`
+### Write Script: `script/img-write-os`
 
 This script automates writing contents into the disk images:
 
 - Uses `dd` for `disk1` to write:
-  - MBR
+  - Boot
   - Loader
   - Kernel
 
 ---
 
-## Explanation of the QEMU Command
+## Running QEMU (script/qemu-debug-osx.sh)
 
 ### Basic System Configuration
 
 - `qemu-system-i386`: Launches QEMU emulating a 32-bit x86 machine.
 - `-m 128M`: Allocates 128MB of memory to the virtual machine.
 - `-serial stdio`: Redirects the virtual machine's serial output to the host terminal.
-  - Useful for printing messages from your OS via `printf`, `putchar`, or low-level serial writes.
-
+  - Useful for printing messages from OS.
 ---
 
 ### Attaching Disk Images
 
 - `-drive file=disk1.dmg,index=0,media=disk,format=raw`  
-  Attaches the first virtual disk (usually containing the MBR, loader, and kernel).
+  Attaches the first virtual disk (containing the boot, loader, and kernel).
 
 - `-drive file=disk2.dmg,index=1,media=disk,format=raw`  
-  Attaches a second virtual disk (typically used for file system or user programs).
+  Attaches a second virtual disk (for file system or user programs).
 
 ---
 
@@ -66,7 +65,7 @@ This script automates writing contents into the disk images:
 - `-s`: Starts a GDB server on TCP port `1234`. Equivalent to `-gdb tcp::1234`.
 - `-S`: Pauses the CPU immediately after boot. Execution will not start until GDB sends a `continue` command.
 
-> ❗ This is why the system will not automatically run your bootloader when QEMU starts. You must connect with GDB and manually start execution.
+> This is why the system will not automatically run bootloader when QEMU starts. You must connect with GDB and manually start execution.
 
 ---
 

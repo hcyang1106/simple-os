@@ -271,7 +271,7 @@ Therefore, every boot sector must explicitly reserve space for this signature, a
 
 ````
 
-  
+---  
 
 ### Build System Notes
 
@@ -352,7 +352,7 @@ The loader is composed of the following files:
 
 The loader is built as an ELF file, then converted into a `.bin` by post-build commands. This binary is then written to the correct disk sector by an image creation script (using objcopy).
 
-  
+---
 
 ### Execution Overview
 
@@ -370,7 +370,7 @@ The loader consists of two main parts:
 
 It begins execution in 16-bit mode and switches to 32-bit protected mode after completing basic memory detection and CPU setup.
 
-  
+---
 
 ### loader_16.c (Real Mode)
   
@@ -495,7 +495,7 @@ uint16_t gdt_table[][4] = {
 
   
 
-#### protect_mode_entry: Segment Setup in Protected Mode
+#### Segment Setup in Protected Mode
 
   
 
@@ -533,7 +533,7 @@ jmp $8, $load_kernel ; 0x08 = code segment selector (index 1 × 8)
 
 ````
 
-  
+---
 
 ###  loader_32.c — Load and Start the Kernel
 

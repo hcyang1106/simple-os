@@ -95,24 +95,74 @@ This script automates writing contents into the disk images:
 
 ---
 
-## In Boot Sector
-![Subdirectory Image](images/boot.jpeg)
+## Boot
 
-The boot sector is the first sector on disk. Its job is to load the "Loader" to memory. After a computer is turned on, BIOS then loads the boot sector to memory address 0x7c00 and starts executing the code in it.
+![Boot Image](images/boot.jpeg)
 
-In the boot sector, we mainly do two things:
-1. Loads the "Loader"  
-2. Jumps to Loader address 0x8000
+The **Boot** code resides in the very first sector of the disk (sector 0) and is loaded by the BIOS to memory address `0x7C00` when the QEMU starts. This is the beginning of the OS boot sequence, running in **real mode (16-bit)**.
 
-Q: Why do we put 0x55, 0xAA as the last two bytes in the boot sector?    
+Since the CPU starts in real mode, the boot code uses `.code16` and __asm__(".code16gcc") (for c file) to tell the assembler to generate 16-bit instructions compatible with the initial CPU state.
 
-A: 0x55, 0xAA indicates that the boot sector is valid so that BIOS can proceed to load the code.
+The Boot stage performs two main tasks:
 
-Q: How does boot load the Loader into memory?    
+1. **Loads the Loader from disk**  
+   The boot code uses BIOS interrupts (e.g., `INT 13h`) to read sectors from disk into memory. Specifically, it loads the "Loader" program into physical memory at address `0x8000`.
 
-A: It uses BIOS interrupt to load the Loader from disk.
+2. **Jumps to the Loader**  
+   After loading, Boot uses a **function pointer** technique in C to jump to the Loader's entry point. For example:
 
-## In Loader
+   ```c
+   #define LOADER_START_ADDR 0x8000
+
+   void boot_entry(void) {
+       ((void (*)(void))LOADER_START_ADDR)();  // jump to loader code
+   }
+
+### Ends with 0x55 and 0xAA
+
+The final two bytes of the boot sector must be `0x55` followed by `0xAA`. This is a **BIOS requirement** to identify a valid boot sector.
+
+BIOS will:
+
+- Scan devices (e.g., hard disk, USB) looking for a bootable sector.
+- Read the **first 512 bytes** of each device (the boot sector).
+- Check the **last two bytes** of that sector:
+  - If they are `0x55AA`, BIOS considers it a valid boot sector and executes it.
+  - If not, BIOS skips the device and tries the next one.
+
+Therefore, every boot sector must explicitly reserve space for this signature, as we can see in boot/start.S : 
+````asm
+.byte 0x55, 0xAA
+````
+
+### Build System Notes
+
+To ensure that the linker places the boot code at the correct physical memory address (**`0x7C00`**) and that the boot sector is exactly **512 bytes**, the following CMake configurations are used:
+
+#### 1. Source Ordering
+
+Place `start.S` **first** in the source list to ensure it becomes the entry point of the final binary:
+
+````cmake
+file(GLOB C_LIST "*.c" "*.h")
+add_executable(${PROJECT_NAME} start.S ${C_LIST})
+````
+
+This guarantees that the start.S (boot) code is linked first and becomes the first code to execute.
+
+#### 2. Linker Address Configuration
+
+Set linker flags so that:
+
+- The boot code starts at `0x7C00`, where the BIOS expects to load it.
+- The `boot_end` section aligns at `0x7DFE` (just before `0x7E00`), leaving space for the `0x55AA` signature at the last two bytes.
+
+````cmake
+set(CMAKE_EXE_LINKER_FLAGS "-m elf_i386 -Ttext=0x7c00 --section-start boot_end=0x7dfe")
+````
+---
+
+## Loader
 ![Subdirectory Image](images/loader.png)
 
 In loader, we do the following tasks:
@@ -141,6 +191,8 @@ Q: Why don't we just load the kernel directly from disk?
 
 A: Sometimes there are spaces between sections (code, data, etc.). Therefore, the binary file could be large. If we load such a large file directly from disk, it may take a long time.
 
+---
+
 ## Mutex
 1. Initialization: The mutex is set to be unlocked with no owner, and a list is created to hold tasks that might have to wait for the lock.
 
@@ -148,12 +200,16 @@ A: Sometimes there are spaces between sections (code, data, etc.). Therefore, th
 
 3. Unlocking: When the owner releases the mutex, if other tasks are waiting, the first one in line is given ownership of the mutex and allowed to continue.
 
+---
+
 ## Semaphore
 1. Initialization: The semaphore is initialized with a specific count value, which represents the number of tasks that can proceed without waiting. A list is created to hold tasks that may need to wait.
 
 2. Waiting (sem_wait): When a task wants to proceed, it checks if the semaphore count is greater than zero. If it is, the task decreases the count and continues. If the count is zero, the task is put on a waiting list, meaning it has to wait until it’s notified (when resources become available).
 
 3. Notifying (sem_notify): When a resource is freed or made available, the first task in the waiting list is notified and allowed to proceed. If no tasks are waiting, the semaphore count is increased, allowing future tasks to continue without waiting.
+
+---
 
 ## Task Structure
 1. state: This enumerates the different states a task can be in, such as TASK_CREATED, TASK_RUNNING, TASK_SLEEP, etc. It tracks the current state of the task.
@@ -177,8 +233,6 @@ A: Sometimes there are spaces between sections (code, data, etc.). Therefore, th
 10. all_node: A list node that links this task to a global list of all tasks, making task management easier.
 
 11. run_node: A list node used to manage the task in different lists (e.g., ready list, sleep list). This allows the task to move between states like "ready" or "sleeping."
-
-
 
 ---
 

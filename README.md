@@ -176,9 +176,7 @@ The loader is composed of the following files:
 
 The loader is built as an ELF file, then converted into a `.bin` by post-build commands. This binary is then written to the correct disk sector by an image creation script (using objcopy).
 
----
-
-### 🧱 Execution Overview
+### Execution Overview
 
 The loader consists of two main parts:
 
@@ -187,9 +185,7 @@ The loader consists of two main parts:
 
 It begins execution in 16-bit mode and switches to 32-bit protected mode after completing basic memory detection and CPU setup.
 
----
-
-### 🔹 `loader_16.c` (Real Mode)
+### `loader_16.c` (Real Mode)
 
 Again, the file starts with:
 
@@ -209,7 +205,7 @@ This tells the assembler to generate 16-bit real-mode instructions.
 - Stores memory map entries into a `boot_info_t` structure
 - Loops through all available entries, stopping when BIOS indicates completion
 
-#### 🧠 Memory Layout (Typical on QEMU with `-m 128M`)
+#### Memory Layout (Typical on QEMU with `-m 128M`)
 
 - 0 - Around 600KB, 1MB - 128MB: Available Memory
 - Others are reserve for video memory and BIOS
@@ -246,7 +242,7 @@ static void enter_protect_mode(void) {
     far_jump(8, (uint32_t)protect_mode_entry);
 }
 ````
-### 🧾 GDT Table Definition
+### GDT Table Definition
 
 The Global Descriptor Table (GDT) is an array of 64-bit segment descriptors used in **protected mode** to define memory segments.
 
@@ -261,7 +257,7 @@ uint16_t gdt_table[][4] = {
 };
 ````
 
-### 🔐 `protect_mode_entry`: Segment Setup in Protected Mode
+### `protect_mode_entry`: Segment Setup in Protected Mode
 
 After enabling protected mode via CR0 and doing a far jump, the CPU switches to protected mode, but all **data segment registers (`ds`, `ss`, `es`, etc.) are still undefined or zero** unless explicitly initialized.
 
@@ -311,8 +307,6 @@ Returns the **entry point address** from the ELF header.
 
 > This is how the loader finds the correct entry address, instead of assuming `0x10000` (set by kernel.lds).
 
----
-
 #### 3. `enable_page_mode()`
 
 Sets up a simple one-entry page directory that maps virtual memory directly to physical memory (identity map):
@@ -322,8 +316,6 @@ Sets up a simple one-entry page directory that maps virtual memory directly to p
 - Enables `CR0.PG` to activate paging
 
 > This is a minimal paging setup used only in the loader; the kernel will later create its own page tables, and use 4KB pages as well.
-
----
 
 #### 4. `Jumps to kernel`
 

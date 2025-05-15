@@ -225,7 +225,7 @@ After loading, Boot uses a **function pointer** technique in C to jump to the Lo
 
   
 
-```c
+````c
 
 #define LOADER_START_ADDR 0x8000
 
@@ -236,8 +236,9 @@ void  boot_entry(void) {
 ((void (*)(void))LOADER_START_ADDR)(); // jump to loader code
 
 }
+````
 
-  
+---
 
 ### Ends with 0x55 and 0xAA
 
@@ -268,7 +269,6 @@ Therefore, every boot sector must explicitly reserve space for this signature, a
 ````asm
 
 .byte 0x55, 0xAA
-
 ````
 
 ---  
@@ -464,8 +464,8 @@ far_jump(8, (uint32_t)protect_mode_entry);
 }
 
 ````
-
-#### GDT Table Definition
+---
+### GDT Table Definition
 
   
 
@@ -493,9 +493,9 @@ uint16_t gdt_table[][4] = {
 
 ````
 
-  
+---
 
-#### Segment Setup in Protected Mode
+### Segment Setup in Protected Mode
 
   
 

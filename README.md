@@ -1,5 +1,5 @@
 # SimpleOS
-SimpleOS is an OS implementation that is used to enhance my understanding of OS concepts. The following explains how I implemented it.
+SimpleOS is an OS implementation that is used to enhance my understanding of OS concepts.
 
 ---
 
@@ -162,34 +162,176 @@ set(CMAKE_EXE_LINKER_FLAGS "-m elf_i386 -Ttext=0x7c00 --section-start boot_end=0
 ````
 ---
 
-## Loader
+### Loader
+
 ![Subdirectory Image](images/loader.png)
 
-In loader, we do the following tasks:
-1. Detect free memory spaces:  
-    A BIOS interrupt is used to detect free memory spaces. The memory information is then passed to the Kernel for further usage.  
 
-2. Enter the protected mode:  
-    There are four steps to enter the protected mode.  
-    a. Clear Interrupt  
-    b. Open the A20 gate  
-    c. Load GDT Table  
-    d. Do a far jump (far jump is used to clear the pipelined instructions). 
+The loader is composed of the following files:
 
-3. Load the Kernel  
-    We first load the elf file of Kernel to address 0x100000, and after that the code is extracted from the elf file and put at 0x10000.
+- `start.S`
+- `loader_16.c`
+- `loader_32.c`
+- `loader.h`
 
-Q: What is protected mode?    
+The loader is built as an ELF file, then converted into a `.bin` by post-build commands. This binary is then written to the correct disk sector by an image creation script (using objcopy).
 
-A: Protected mode lets CPU access memory address higher than 1MB, and also provides protection, preventing programs from interfering with each other.
+---
 
-Q: Why do intel CPUs start from real mode first, and then enter protected mode later?    
+### 🧱 Execution Overview
 
-A: Backward Compatibility. When CPUs with protected mode was released, there was already a significant base of software that ran in real mode. Starting in real mode ensures that older operating systems and software can still run on newer processors.
+The loader consists of two main parts:
 
-Q: Why don't we just load the kernel directly from disk?    
+- `loader_16.c`: Runs in **real mode**
+- `loader_32.c`: Runs in **protected mode**, enables paging, and loads the kernel
 
-A: Sometimes there are spaces between sections (code, data, etc.). Therefore, the binary file could be large. If we load such a large file directly from disk, it may take a long time.
+It begins execution in 16-bit mode and switches to 32-bit protected mode after completing basic memory detection and CPU setup.
+
+---
+
+### 🔹 `loader_16.c` (Real Mode)
+
+Again, the file starts with:
+
+````c
+__asm__(".code16gcc");
+````
+This tells the assembler to generate 16-bit real-mode instructions.
+
+#### 1. Show Startup Message
+
+- Uses BIOS interrupt `INT 10h` to print a message to the screen
+- Displays one character at a time using `INT 10h`
+
+#### 2. Detect Usable Memory
+
+- Calls BIOS interrupt `INT 15h`.
+- Stores memory map entries into a `boot_info_t` structure
+- Loops through all available entries, stopping when BIOS indicates completion
+
+#### 🧠 Memory Layout (Typical on QEMU with `-m 128M`)
+
+- 0 - Around 600KB, 1MB - 128MB: Available Memory
+- Others are reserve for video memory and BIOS
+
+### Entering Protected Mode
+
+The `enter_protect_mode()` function transitions the CPU from **real mode** to **protected mode**. This involves enabling the A20 line, setting up the GDT, flipping the PE bit in `CR0`, and performing a far jump to 32-bit code.
+
+Below is the code:
+
+````c
+static void enter_protect_mode(void) {
+    // 1. Disable interrupts to prevent unexpected behavior during the mode switch
+    cli();
+
+    // 2. Enable the A20 line (allow addressing beyond 1MB)
+          // A20 address line wraparound occurs in x86 real mode when the A20 line is    disabled, causing addresses above 1 MB (e.g., 0x100000) to wrap around to low memory (e.g., 0x00000) for 8086 compatibility (since there are only 20 address lines in 8086). Enable A20 and switch to protected mode to access 1 MB–128 MB.
+    uint8_t v = inb(0x92);
+    outb(0x92, v | 0x2);
+
+    // 3. Load the Global Descriptor Table (GDT)
+    //    The GDT defines memory segments for protected mode
+    lgdt((uint32_t)gdt_table, sizeof(gdt_table));
+
+    // 4. Enable protected mode
+    //    Set the PE (Protection Enable) bit in control register CR0
+    uint32_t cr0 = read_cr0();
+    write_cr0(cr0 | (1 << 0));
+
+    // 5. Perform a far jump to clear the instruction pipeline
+    //    This is necessary because enabling PE doesn't immediately switch to protected mode
+    //    The far jump flushes the CPU pipeline and sets the new CS value
+    //    Jump to assembly since we need to set segment registers
+    far_jump(8, (uint32_t)protect_mode_entry);
+}
+````
+### 🧾 GDT Table Definition
+
+The Global Descriptor Table (GDT) is an array of 64-bit segment descriptors used in **protected mode** to define memory segments.
+
+In the loader, the GDT is defined as follows:
+
+````c
+uint16_t gdt_table[][4] = {
+    // Each descriptor is 64 bits = 4 × 16-bit words
+    {0, 0 , 0, 0},                 // Null descriptor (mandatory)
+    {0xFFFF, 0x0000, 0x9A00, 0x00CF}, // Code segment: base=0x00000000, limit=0xFFFFF, DPL=0, exec/read
+    {0xFFFF, 0x0000, 0x9200, 0x00CF}, // Data segment: base=0x00000000, limit=0xFFFFF, DPL=0, read/write
+};
+````
+
+### 🔐 `protect_mode_entry`: Segment Setup in Protected Mode
+
+After enabling protected mode via CR0 and doing a far jump, the CPU switches to protected mode, but all **data segment registers (`ds`, `ss`, `es`, etc.) are still undefined or zero** unless explicitly initialized.
+
+In `protect_mode_entry`, the goal is to initialize all relevant segment registers to use a proper **data segment descriptor** from the GDT and then jump to the main kernel code.
+
+````asm
+protect_mode_entry:
+    // Set all data segment registers to use selector 0x10
+    mov $16, %ax        ; 0x10 = selector for data segment in GDT (index 2 × 8)
+    mov %ax, %ds        ; Set data segment
+    mov %ax, %ss        ; Set stack segment
+    mov %ax, %es        ; Extra segment (used in string ops)
+    mov %ax, %fs        ; FS/GS available for user/kernel-specific storage
+    mov %ax, %gs
+
+    // Far jump to reload CS with 0x08 (code segment selector) and start kernel logic
+    jmp $8, $load_kernel  ; 0x08 = code segment selector (index 1 × 8)
+````
+
+### `loader_32.c` — Load and Start the Kernel
+
+This file represents the 32-bit stage of the loader, which is entered after switching into protected mode. It is responsible for:
+
+1. Reading the kernel from disk
+2. Parsing the ELF file
+3. Setting up temporary paging
+4. Jumping to the kernel's entry point
+
+
+#### 1. `read_disk(sector, sector_count, buf)`
+
+Reads sectors from disk into memory using **LBA mode**:
+
+- This reads the kernel binary from disk sector 100 into memory at `SYS_KERNEL_LOAD_ADDR`.
+
+#### 2. `reload_elf_file(file_buffer)`
+
+Parses the kernel ELF file and loads each segment defined in the **Program Header Table**:
+
+- Validates the ELF magic number (`0x7F 'E' 'L' 'F'`)
+- Iterates through program headers
+- For each `PT_LOAD` segment:
+  - Copies file contents from `p_offset` to `p_paddr`
+  - Zeroes out `.bss` using `p_memsz - p_filesz`
+
+Returns the **entry point address** from the ELF header.
+
+> This is how the loader finds the correct entry address, instead of assuming `0x10000` (set by kernel.lds).
+
+---
+
+#### 3. `enable_page_mode()`
+
+Sets up a simple one-entry page directory that maps virtual memory directly to physical memory (identity map):
+
+- Uses **4MB pages**
+- Sets CR3 to the aligned page directory (note that page directory is aligned to 4096)
+- Enables `CR0.PG` to activate paging
+
+> This is a minimal paging setup used only in the loader; the kernel will later create its own page tables, and use 4KB pages as well.
+
+---
+
+#### 4. `Jumps to kernel`
+
+Jumps to the kernel entry point with `boot_info` as argument:
+
+````c
+((void (*)(boot_info_t *))kernel_entry)(&boot_info);
+````
 
 ---
 

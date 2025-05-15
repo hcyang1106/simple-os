@@ -543,16 +543,13 @@ This file represents the 32-bit stage of the loader, which is entered after swit
 
   
 
-1. Reading the kernel from disk
+- Reading the kernel from disk
 
-2. Parsing the ELF file
+- Parsing the ELF file
 
-3. Setting up temporary paging
+- Setting up temporary paging
 
-4. Jumping to the kernel's entry point
-
-  
-  
+- Jumping to the kernel entry point
 
 #### 1. `read_disk(sector, sector_count, buf)`
 

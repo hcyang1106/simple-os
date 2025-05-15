@@ -401,7 +401,7 @@ It begins execution in 16-bit mode and switches to 32-bit protected mode after c
 
   
 
-### Entering Protected Mode
+#### 3. Entering Protected Mode
 
   
 
@@ -465,7 +465,7 @@ far_jump(8, (uint32_t)protect_mode_entry);
 
 ````
 
-### GDT Table Definition
+#### GDT Table Definition
 
   
 
@@ -495,7 +495,7 @@ uint16_t gdt_table[][4] = {
 
   
 
-### protect_mode_entry: Segment Setup in Protected Mode
+#### protect_mode_entry: Segment Setup in Protected Mode
 
   
 

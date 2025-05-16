@@ -578,11 +578,9 @@ Returns the **entry point address** from the ELF header.
 
 #### 3. `enable_page_mode()`
 
-  
+![Subdirectory Image](images/4MB_paging.png)
 
-Sets up a simple one-entry page directory that maps virtual memory directly to physical memory (identity map):
-
-  
+Sets up a simple one-entry page directory that maps virtual memory directly to physical memory (**identity map**), so that loader is able to continue running:
 
 - Uses **4MB pages**
 

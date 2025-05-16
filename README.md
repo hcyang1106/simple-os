@@ -19,8 +19,6 @@ To build and run the OS on MacOS, you’ll need the following:
 
 | Tool | Purpose |
 
-|-----------------------|------------------------------------------|
-
 | `qemu-system-i386` | Emulates an x86 PC |
 
 | `cmake` | Build configuration |
@@ -53,11 +51,11 @@ To build and run the OS on MacOS, you’ll need the following:
 
 - Uses precise sector control for:
 
-- Boot (first 512 bytes)
+  - Boot (first 512 bytes)
 
-- Loader (second stage bootloader)
+  - Loader (second stage bootloader)
 
-- Kernel
+  - Kernel
 
   
 
@@ -65,19 +63,7 @@ To build and run the OS on MacOS, you’ll need the following:
 
   
 
-This script automates writing contents into the disk images:
-
-  
-
-- Uses `dd` for `disk1` to write:
-
-- Boot
-
-- Loader
-
-- Kernel
-
-  
+This script automates writing contents into the disk images (using `dd`)
 
 ---
 
@@ -155,9 +141,9 @@ Attaches a second virtual disk (for file system or user programs).
 
 - ELF files are loaded to provide:
 
-- Symbol information
+  - Symbol information
 
-- Debug info (DWARF sections)
+  - Debug info (DWARF sections)
 
   
 
@@ -205,7 +191,7 @@ The **Boot** code resides in the very first sector of the disk (sector 0) and is
 
   
 
-Since the CPU starts in real mode, the boot code uses `.code16` and __asm__(".code16gcc") (for c file) to tell the assembler to generate 16-bit instructions compatible with the initial CPU state.
+Since the CPU starts in real mode, the boot code uses `.code16` and `__asm__(".code16gcc")` (for c file) to tell the assembler to generate 16-bit instructions compatible with the initial CPU state.
 
   
 
@@ -350,7 +336,7 @@ The loader is composed of the following files:
 
   
 
-The loader is built as an ELF file, then converted into a `.bin` by post-build commands. This binary is then written to the correct disk sector by an image creation script (using objcopy).
+The loader is built as an ELF file, then converted into a `.bin` by post-build commands. This binary is then written to the correct disk sector by an image creation script (using `script/img-write-os`).
 
 ---
 
@@ -362,13 +348,13 @@ The loader consists of two main parts:
 
   
 
--  `loader_16.c`: Runs in **real mode**
+-  `loader_16.c`: Runs in **real mode**, performs **memory detection** (using BIOS interrupt)
 
--  `loader_32.c`: Runs in **protected mode**, enables paging, and loads the kernel
+-  `loader_32.c`: Runs in **protected mode**, **enables paging**, and **loads the kernel**
 
   
 
-It begins execution in 16-bit mode and switches to 32-bit protected mode after completing basic memory detection and CPU setup.
+It begins execution in 16-bit mode and switches to 32-bit protected mode after completing basic memory detection.
 
 ---
 
@@ -395,9 +381,9 @@ It begins execution in 16-bit mode and switches to 32-bit protected mode after c
 
 - Loops through all available entries, stopping when BIOS indicates completion
 
-- 0 - Around 600KB, 1MB - 128MB: Available Memory
+- 0 - Around 600KB, 1MB - 128MB are available memory
 
-- Others are reserve for video memory and BIOS
+- Others parts of memory are reserve for video memory and BIOS
 
   
 
@@ -405,7 +391,7 @@ It begins execution in 16-bit mode and switches to 32-bit protected mode after c
 
   
 
-The `enter_protect_mode()` function transitions the CPU from **real mode** to **protected mode**. This involves enabling the A20 line, setting up the GDT, flipping the PE bit in `CR0`, and performing a far jump to 32-bit code.
+The `enter_protect_mode()` function transitions the CPU from **real mode** to **protected mode**. This involves **enabling the A20 line**, **setting up the GDT**, **flipping the PE bit in `CR0`**, and **performing a far jump to 32-bit code**.
 
   
 
@@ -417,7 +403,8 @@ Below is the code:
 
 static  void  enter_protect_mode(void) {
 
-// 1. Disable interrupts to prevent unexpected behavior during the mode switch
+// 1. Disable interrupts to prevent unexpected behavior
+// during the mode switch
 
 cli();
 
@@ -425,7 +412,10 @@ cli();
 
 // 2. Enable the A20 line (allow addressing beyond 1MB)
 
-// A20 address line wraparound occurs in x86 real mode when the A20 line is disabled, causing addresses above 1 MB (e.g., 0x100000) to wrap around to low memory (e.g., 0x00000) for 8086 compatibility (since there are only 20 address lines in 8086). Enable A20 and switch to protected mode to access 1 MB–128 MB.
+// A20 address line wraparound occurs in x86 real-mode when the A20 line is disabled, 
+// causing addresses above 1 MB (e.g., 0x100000) to wrap around to low memory (e.g., 0x00000)
+// for 8086 compatibility (since there are only 20 address lines in 8086). 
+// Enable A20 and switch to protected mode to access 1 MB–128 MB.
 
 uint8_t v = inb(0x92);
 
@@ -434,7 +424,6 @@ outb(0x92, v | 0x2);
   
 
 // 3. Load the Global Descriptor Table (GDT)
-
 // The GDT defines memory segments for protected mode
 
 lgdt((uint32_t)gdt_table, sizeof(gdt_table));
@@ -442,7 +431,6 @@ lgdt((uint32_t)gdt_table, sizeof(gdt_table));
   
 
 // 4. Enable protected mode
-
 // Set the PE (Protection Enable) bit in control register CR0
 
 uint32_t cr0 = read_cr0();
@@ -451,12 +439,9 @@ write_cr0(cr0 | (1 << 0));
 
   
 
-// 5. Perform a far jump to clear the instruction pipeline
-
+// 5. Performs a far jump to clear the instruction pipeline
 // This is necessary because enabling PE doesn't immediately switch to protected mode
-
 // The far jump flushes the CPU pipeline and sets the new CS value
-
 // Jump to assembly since we need to set segment registers
 
 far_jump(8, (uint32_t)protect_mode_entry);
@@ -469,7 +454,7 @@ far_jump(8, (uint32_t)protect_mode_entry);
 
   
 
-The Global Descriptor Table (GDT) is an array of 64-bit segment descriptors used in **protected mode** to define memory segments.
+The Global Descriptor Table (GDT) is an array of **64-bit** segment descriptors used in **protected mode** to define memory segments.
 
   
 
@@ -503,7 +488,7 @@ After enabling protected mode via CR0 and doing a far jump, the CPU switches to 
 
   
 
-In `protect_mode_entry`, the goal is to initialize all relevant segment registers to use a proper **data segment descriptor** from the GDT and then jump to the main kernel code.
+In `protect_mode_entry`, the goal is to initialize all relevant segment registers to use a proper **data segment descriptor** from the GDT.
 
   
 
@@ -527,7 +512,7 @@ mov %ax, %gs
 
   
 
-// Far jump to reload CS with 0x08 (code segment selector) and start kernel logic
+// Far jump to reload CS with 0x08 (code segment selector) and start loading kernel
 
 jmp $8, $load_kernel ; 0x08 = code segment selector (index 1 × 8)
 

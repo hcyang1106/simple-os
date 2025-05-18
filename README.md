@@ -608,11 +608,61 @@ Jumps to the kernel entry point with `boot_info` as argument:
 
 ````
 
-  
+---
+
+## Kernel
+
+The kernel is the core component that takes over control after the loader finishes its job. It is entered in **32-bit protected mode**, and is responsible for initializing essential subsystems.
+
+The kernel is compiled as an **ELF file** with a well-defined entry point (`_start` in `start.S`) and loaded into memory by the loader.
 
 ---
 
-  
+### Passing `boot_info` to `kernel_init`
+
+The loader passes a pointer to the `boot_info_t` structure to the kernel's entry function (`_start`). This structure contains usable memory information, and we will further pass this pointer into `kernel_init` function.
+
+At the end of loader, we do:
+````c
+((void (*)(boot_info_t *))kernel_entry)(&boot_info);
+````
+
+From Intel calling conventions, we know parameters (boot_info) and return address are pushed into the stack in order, so the stack looks like:
+
+````c
+↑ Higher Address
+
+[ boot_info pointer ]
+[ return address ] <- esp
+````
+
+After entering _start, we follow the conventions as well, pushing ebp register to stack,
+moving esp to ebp, and we can fetch the parameter (boot_info) pushed previously:
+
+````c
+↑ Higher Address
+
+[ boot_info pointer ]
+[ return address ]
+[ prev ebp ] <- current ebp/esp
+````
+
+Finally, to pass the parameter (boot_info) to `kernel_init`, we push it again to the stack so that in `kernel_init` it can fetch it using the calling conventions:
+
+````c
+↑ Higher Address
+
+[ boot_info pointer ]
+[ return address ]
+[ prev ebp ] <- current ebp
+[ boot_info pointer (eax) ] <- current esp
+````
+
+---
+
+### GDT Initialization
+
+---
 
 ## Mutex
 

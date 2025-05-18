@@ -658,6 +658,13 @@ Finally, to pass the parameter (boot_info) to `kernel_init`, we push it again to
 [ boot_info pointer (eax) ] <- current esp
 ````
 
+(Optional) In the code, it doesn't return to the caller function so we don't have to handle that part. However, following the conventions a function should clear the stack frame, which moves **esp** to **current ebp** and update ebp by popping the stack.
+
+````c
+mov %ebp, %esp
+pop %ebp 
+````
+
 ---
 
 ### GDT Initialization

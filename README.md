@@ -667,7 +667,71 @@ pop %ebp
 
 ---
 
-### GDT Initialization
+### GDT Overview
+The Global Descriptor Table (GDT) is a data structure used in protected mode on x86 to define memory segments and privilege levels.
+
+Each entry in the GDT is called a segment descriptor, which tells the CPU:
+
+What range of memory it describes (base + limit)
+
+What kind of access is allowed (code/data, read/write)
+
+What privilege level is required (ring 0–3)
+
+The CPU uses segment selectors (like cs, ds) to index into the GDT and load the correct descriptor.
+___
+
+### GDT Initialization (`init_gdt`)
+This function initializes a larger, more complete GDT table than the earlier boot-time minimal GDT. It prepares the to support separate code/data segments for kernel.
+
+---
+
+### Exceptions vs. Interrupts
+Interrupts and exceptions are special control transfers that redirect the CPU to handle unusual conditions.
+
+Interrupts are triggered by external, asynchronous events (e.g., keyboard input, timer tick).
+
+Exceptions are triggered internally by the CPU during instruction execution (e.g., divide-by-zero, page fault).
+
+Both use the **IDT** to determine how to handle the event — by jumping to the corresponding handler function defined in the IDT entry.
+
+---
+
+### IDT Overview
+
+The **Interrupt Descriptor Table (IDT)** is a data structure used in x86 protected mode to define how the CPU should respond to **interrupts** and **exceptions**.
+
+Each entry in the IDT tells the CPU:
+
+Which **segment selector** to use (usually pointing to a code segment in the GDT).
+
+What type of gate it is (interrupt gate, trap gate).
+
+What privilege level (DPL) is required to trigger it.
+
+---
+
+### IDT Together with the GDT
+
+The **Interrupt Descriptor Table (IDT)** doesn't work in isolation — it relies on the **Global Descriptor Table (GDT)** to define what memory segment the CPU should switch to when handling an interrupt or exception.
+
+Each **IDT entry** includes a **segment selector**, which refers to an entry in the **GDT**, typically the **kernel code segment**:
+
+````c
+gate_desc_set(..., KERNEL_SELECTOR_CS, handler_addr, ...);
+// KERNEL_SELECTOR_CS = 0x08 → points to the code segment in the GDT
+````
+- When an interrupt or exception occurs, the CPU:
+
+  - Looks up the handler address in the IDT
+
+  - Loads the CS register using the segment selector from the IDT entry
+
+  - Sets EIP to the handler’s offset
+
+  - Switches to kernel mode (if privilege level allows)
+
+  - Starts executing the interrupt handler
 
 ---
 

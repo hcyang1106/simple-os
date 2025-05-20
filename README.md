@@ -790,7 +790,7 @@ Generates an exception handler labeled `exception_handler_<name>` that:
    - Restores `EIP`, `CS`, and `EFLAGS`  
 ---
 
-## PIC Initialization
+### PIC Initialization
 
 The x86 platform uses **two cascaded 8259 PIC (Programmable Interrupt Controller) chips** to manage hardware interrupts:
 

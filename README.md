@@ -790,9 +790,64 @@ Generates an exception handler labeled `exception_handler_<name>` that:
    - Restores `EIP`, `CS`, and `EFLAGS`  
 ---
 
-### Stack Layout at C-handler Entry
+## PIC Initialization
+
+The x86 platform uses **two cascaded 8259 PIC (Programmable Interrupt Controller) chips** to manage hardware interrupts:
+
+- **Master PIC (PIC0)** handles IRQ 0–7  
+- **Slave PIC (PIC1)** handles IRQ 8–15 and connects to IRQ2 of PIC0  
+
+---
+
+### Key Points from `init_pic()`
+
+1. **Two PIC Chips Are Connected**  
+   - PIC1 is connected to PIC0’s IRQ2 line  
+   - This cascade setup expands the number of IRQs from 8 to 16  
+
+2. **Interrupt Numbers Can Be Remapped**  
+   - PIC0 is configured to start at interrupt vector `0x20`  
+   - PIC1 is configured to start at `0x28`  
+   - This avoids overlapping with CPU exception vectors (which use 0x00–0x1F)
+
+3. **Each IRQ Line Can Be Masked or Enabled**  
+   - The **IMR (Interrupt Mask Register)** is used to disable specific IRQ lines  
+   - In this setup:
+     - PIC0 masks all IRQs except IRQ2 (used to reach PIC1)  
+     - PIC1 masks all its IRQs until drivers enable them later
+
+````c
+outb(PIC0_IMR, 0xFF & ~(1 << 2));  // Unmask only IRQ2
+outb(PIC1_IMR, 0xFF);              // Mask all slave IRQs
+````
+
+---
+
+### Controlling Interrupts in x86
+
+Interrupts in x86 can be managed at **two levels**:
 
 
+1. Each 8259 PIC provides an **Interrupt Mask Register (IMR)**  
+- **Mask** (disable) an IRQ by setting its bit in the IMR  
+- **Unmask** (enable) an IRQ by clearing its bit  
+
+2. **Global Enable/Disable (EFLAGS.IF)**
+- The **IF (Interrupt Flag)** in the **EFLAGS** register gates all maskable interrupts
+- **cli** — Clear the IF flag → disable all maskable interrupts
+- **sti** — Set the IF flag → enable all maskable interrupts
+
+---
+
+### PIT (Programmable Interval Timer, 8253) Configuration
+
+- The PIT oscillator runs at `PIT_OSC_FREQ` (≈ 1.193182 MHz).
+- To generate an OS tick every `OS_TICK_MS` milliseconds, compute the reload value:
+````c
+reload_count = PIT_OSC_FREQ / (1000.0 / OS_TICK_MS);
+````
+- PIT is hardwired to **IRQ 0** (interrupt vector 0x20) on the master 8259 PIC.
+- Each time the countdown reaches zero, the PIT sends an interrupt.
 
 ---
 

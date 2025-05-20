@@ -851,6 +851,56 @@ reload_count = PIT_OSC_FREQ / (1000.0 / OS_TICK_MS);
 
 ---
 
+### `klib.c` Function List
+
+The `klib.c` file provides basic kernel-level string and memory functions. It includes:
+
+### String Functions
+- `kernel_strcpy(char *dest, const char *src)`
+- `kernel_strncpy(char *dest, const char *src, int n)`
+- `kernel_strncmp(const char *s1, const char *s2, int n)`
+- `kernel_strlen(const char *s)`
+
+### Memory Functions
+- `kernel_memcpy(void *dest, const void *src, int n)`
+- `kernel_memset(void *dest, uint8_t v, int n)`
+- `kernel_memcmp(const void *d1, const void *d2, int n)`
+
+### Formatted Output & Number Conversion
+- `kernel_vsprintf(char *buf, const char *fmt, va_list args)`
+- `kernel_sprintf(char *buf, const char *fmt, ...)`
+- `kernel_itoa(char *buf, int num, int base)`
+
+---
+
+### `kernel_vsprintf`: Formatted Output
+
+This function mimics `vsprintf`, formatting a string using a format string and a `va_list` of arguments. It supports the following format specifiers:
+
+- `%s` – string  
+- `%d` – decimal integer  
+- `%x` – hexadecimal integer  
+- `%c` – character
+
+The function processes the format string one character at a time. When it sees a `%`, it enters a state to parse the next format character and uses helper functions like:
+
+- `kernel_strcpy()` and `kernel_strlen()` for `%s`
+- `kernel_itoa()` for `%d` and `%x`
+- direct character assignment for `%c`
+
+No dynamic memory allocation is used; the buffer is filled directly.
+
+---
+
+### `kernel_itoa`: Integer to String Conversion
+
+This function converts an integer `num` into a string representation in the given `base`. It supports bases 2, 8, 10, 16:
+
+- If `num` is negative and base is 10, it handles the sign, otherwise use two's complement.
+- Note that for negative base 10 numbers, we cannot simply do **num = -num** since there's an issue of **overflow**
+
+___
+
 ## Mutex
 
 1. Initialization: The mutex is set to be unlocked with no owner, and a list is created to hold tasks that might have to wait for the lock.

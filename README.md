@@ -931,7 +931,7 @@ During initialization, we call `tss_init()` and pass in the **entry** and **kern
 
 ---
 
-## How TSS Works
+### How TSS Works
 
 **Each process has its own TSS (Task State Segment)**.
 

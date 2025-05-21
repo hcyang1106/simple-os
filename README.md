@@ -951,6 +951,38 @@ This causes the CPU to load the new task's TSS, restore all saved registers from
 
 ---
 
+### Task Management and List Structure
+
+The kernel organizes tasks using a custom **doubly linked list** system. At the center of task management is the `task_manager_t` structure, which contains several different task lists.
+
+One of the core data structures are for list management:
+
+````c
+typedef struct _list_node_t {
+    struct _list_node_t *pre;
+    struct _list_node_t *next;
+} list_node_t;
+````
+
+Instead of storing pointers to task_t directly, the kernel **embeds a list_node_t inside task_t**. This avoids creating **list manipulating functions** every time a new data structure is introduced. That is, for every data structure to be organized as a list, we can just **embed list_node_t** in it and all list manipulating functions could be **resued** (e.g. list_insert_last, list_insert_after, etc.).
+
+To retrieve the **containing structure pointer** (e.g. task_t*) from a list_node_t*, the following macros are used:
+
+````c
+#define offset_in_parent(parent_type, node_name) \
+    ((uint32_t)&((parent_type*)0)->node_name)
+
+#define parent_addr(parent_type, node_name, list_node_ptr) \
+    ((uint32_t)list_node_ptr - offset_in_parent(parent_type, node_name))
+
+#define parent_pointer(parent_type, node_name, list_node_ptr) \
+    ((parent_type*)(list_node_ptr ? parent_addr(parent_type, node_name, list_node_ptr) : 0))
+````
+
+These macros perform pointer arithmetic to backtrack from the list node pointer to the parent structure pointer that embeds it.
+
+___
+
 ## Mutex
 
 1. Initialization: The mutex is set to be unlocked with no owner, and a list is created to hold tasks that might have to wait for the lock.

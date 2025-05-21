@@ -713,6 +713,8 @@ What privilege level (DPL) is required to trigger it.
 
 ### IDT Together with GDT
 
+![Subdirectory Image](images/IDT_with_GDT.png)
+
 The **Interrupt Descriptor Table (IDT)** doesn't work in isolation — it relies on the **Global Descriptor Table (GDT)** to define what memory segment the CPU should switch to when handling an interrupt or exception.
 
 Each **IDT entry** includes a **segment selector**, which refers to an entry in the **GDT**, typically the **kernel code segment**:

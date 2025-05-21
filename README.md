@@ -933,11 +933,14 @@ During initialization, we call `tss_init()` and pass in the **entry** and **kern
 
 ## How TSS Works
 
-- **Each process has its own TSS (Task State Segment)**.
-- Therefore, for **every process**, a corresponding **TSS descriptor is placed in the GDT**.
-- These descriptors let the CPU locate and use the correct TSS when performing a task switch, and the corresponding selector (`tss_sel`) is stored in the **task structure**.
-- Note that TSS structures **cannot be dynamically allocated (e.g., via `malloc`)**. Instead, the kernel preallocates a fixed array of TSS entries globally.
-- To switch between tasks, the kernel performs a **far jump (ljmp)** to the TSS selector of the target task:
+**Each process has its own TSS (Task State Segment)**.
+Therefore, for **every process**, a corresponding **TSS descriptor is placed in the GDT**.
+These descriptors let the CPU locate and use the correct TSS when performing a task switch, and the corresponding selector (`tss_sel`) is stored in the **task structure**.
+
+Note that TSS structures **cannot be dynamically allocated (e.g., via `malloc`)**. Instead, the kernel preallocates a fixed array of TSS entries globally.
+
+To switch between tasks, the kernel performs a **far jump (ljmp)** to the TSS selector of the target task:
+
 ````c
 ljmp $selector, $0
 ````

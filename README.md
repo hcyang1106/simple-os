@@ -919,6 +919,32 @@ This function converts an integer `num` into a string representation in the give
 
 ___
 
+### Task Switching with TSS
+
+<img src="images/TSS.png" width="500">
+
+This kernel uses **TSS (Task State Segment)** to support task switching.
+
+When switching tasks, the CPU can automatically load new values for registers (including **general, segment, esp, eip, eflags, CR3**, etc.).
+
+During initialization, we call `tss_init()` and pass in the **entry** and **kernel stack pointer** (`esp`) for the task:
+
+---
+
+## How TSS Works
+
+- **Each process has its own TSS (Task State Segment)**.
+- Therefore, for **every process**, a corresponding **TSS descriptor is placed in the GDT**.
+- These descriptors let the CPU locate and use the correct TSS when performing a task switch, and the corresponding selector (`tss_sel`) is stored in the **task structure**.
+- Note that TSS structures **cannot be dynamically allocated (e.g., via `malloc`)**. Instead, the kernel preallocates a fixed array of TSS entries globally.
+- To switch between tasks, the kernel performs a **far jump (ljmp)** to the TSS selector of the target task:
+````c
+ljmp $selector, $0
+````
+This causes the CPU to load the new task's TSS, restore all saved registers from the TSS, and begin execution from the eip stored in that TSS.
+
+---
+
 ## Mutex
 
 1. Initialization: The mutex is set to be unlocked with no owner, and a list is created to hold tasks that might have to wait for the lock.

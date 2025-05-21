@@ -686,6 +686,22 @@ This function initializes a larger, more complete GDT table than the earlier boo
 
 ---
 
+### (Not Used) LDT Overview
+
+<img src="images/LDT.png" width="500">
+
+The **Local Descriptor Table (LDT)** is a per-process table that holds segment descriptors (like code and data segments) specific to a single process.
+
+- Each process can have its own LDT to define private memory segments.
+- The CPU has a special register called **LDTR**, which stores a **selector** pointing to an entry in the **GDT**.
+- That GDT entry describes the **base address and size of the LDT**.
+
+- When a segment register (like `cs`, `ds`, or `ss`) contains a **selector with the TI (Table Indicator) bit set to 1**, it tells the CPU to look up the descriptor in the **LDT**, not the GDT.
+
+- The **selector to the LDT entry in the GDT is saved in the TSS (Task State Segment)**.
+
+---
+
 ### Exceptions vs. Interrupts
 Interrupts and exceptions are special control transfers that redirect the CPU to handle unusual conditions.
 

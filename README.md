@@ -713,7 +713,7 @@ What privilege level (DPL) is required to trigger it.
 
 ### IDT Together with GDT
 
-<img src="images/IDT_with_GDT.png" width="250">
+<img src="images/IDT_with_GDT.png" width="1800">
 
 The **Interrupt Descriptor Table (IDT)** doesn't work in isolation — it relies on the **Global Descriptor Table (GDT)** to define what memory segment the CPU should switch to when handling an interrupt or exception.
 

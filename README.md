@@ -1052,25 +1052,25 @@ Key Fields in `task_manager_t`:
 
 ### Task Yielding (`sys_yield`, relinquishing the CPU)
 
-When a task voluntarily gives up the CPU by a system call, the operating system performs the following steps to switch to another runnable task using sys_yield:
+When a task voluntarily gives up the CPU by a system call, the operating system performs the following steps to switch to another runnable task using sys_yield.
 
 ### Yielding Procedure
 
-1. **Remove the Current Task from the Ready List**  
+1. **Remove the Current Task from the Ready List**
    The current task is removed from the front of the ready list using the function:
    ````c
    task_set_unready(curr_task);
    ````
-2. Re-append the Task to the End of the Ready List
-This allows the task to run again later after others have had a chance:
-````c
-task_set_ready(curr_task);
-````
-3. Select the Next Task to Run
-The OS picks the **first task** in the ready list and switches context to it using:
-````c
-task_dispatch(next_task);
-````
+2. **Re-append the Task to the End of the Ready List**
+    This allows the task to run again later after others have had a chance:
+    ````c
+    task_set_ready(curr_task);
+    ````
+3. **Select the Next Task to Run**
+    The OS picks the **first task** in the ready list and switches context to it using:
+    ````c
+    task_dispatch(next_task);
+    ````
 ---
 
 ## Mutex

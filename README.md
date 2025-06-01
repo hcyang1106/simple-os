@@ -862,11 +862,15 @@ Interrupts in x86 can be managed at **two levels**:
 
 - The PIT oscillator runs at `PIT_OSC_FREQ` (≈ 1.193182 MHz).
 - To generate an OS tick every `OS_TICK_MS` milliseconds, compute the reload value:
-````c
-reload_count = PIT_OSC_FREQ / (1000.0 / OS_TICK_MS);
-````
+    ````c
+    reload_count = PIT_OSC_FREQ / (1000.0 / OS_TICK_MS);
+    ````
 - PIT is hardwired to **IRQ 0** (interrupt vector 0x20) on the master 8259 PIC.
 - Each time the countdown reaches zero, the PIT sends an interrupt.
+- The handler function is registered in /kernel/init/start.S through:
+    ````c
+    exception_handler timer, 0x20, 0
+    ````
 
 ---
 
@@ -985,7 +989,7 @@ These macros perform pointer arithmetic to backtrack from the list node pointer 
 ___
 
 
-## Task Structure (`task_t`)
+### Task Structure (`task_t`)
 
 The `task_t` structure represents a process in the kernel. It holds all necessary information for task scheduling, execution, and management.
 
@@ -1035,6 +1039,8 @@ ___
 
 ### Task Manager: `task_manager_t`
 
+<img src="images/task_manager.png" width="500">
+
 The kernel uses the `task_manager_t` structure to organize and manage the lifecycle and state of tasks using linked lists and a current task pointer.
 
 Key Fields in `task_manager_t`:
@@ -1071,6 +1077,25 @@ When a task voluntarily gives up the CPU by a system call, the operating system 
     ````c
     task_dispatch(next_task);
     ````
+---
+
+### Round-Robin Scheduling
+
+The kernel uses a **round-robin scheduling** strategy to ensure fair CPU time distribution among all ready tasks.
+
+### Time Slice
+
+- Each task is allowed to run for a **maximum of 10 ticks** (time units).
+- A global timer (e.g., driven by the PIT interrupt) increments the tick count.
+
+### Switching Tasks
+
+- After **10 ticks**, the currently running task yields the CPU.
+- The scheduler then picks the **next task** in the `ready_list` using `task_dispatch`.
+
+This ensures that all tasks take turns using the CPU in a **first-come, first-served** manner.
+
+
 ---
 
 ## Mutex

@@ -21,13 +21,14 @@ To build and run the OS on MacOS, you’ll need the following:
 
 | `qemu-system-i386` | Emulates an x86 PC |
 
-| `cmake` | Build configuration |
+| `CMake` | Build configuration |
 
 | `x86_64-elf-gcc` | Cross-compiler for x86 ELF |
 
 | `x86_64-elf-gdb` | Cross-debugger to connect to QEMU (used for remote debugging) |
 
 | `ld`, `as`, `objcopy`, `objdump`, `readelf` | Tools for ELF analysis and binary conversion |
+| `CMake Tools` and `C/C++ Extension` | Make CMake configs and debugger setup more convenient|
 
   
 
@@ -658,7 +659,7 @@ Finally, to pass the parameter (boot_info) to `kernel_init`, we push it again to
 [ boot_info pointer (eax) ] <- current esp
 ````
 
-(Optional) In the code, it doesn't return to the caller function so we don't have to handle that part. However, following the conventions a function should clear the stack frame, which moves **esp** to **current ebp** and update ebp by popping the stack.
+(Optional) In the code, it doesn't return to the caller function so we don't have to handle that part. However, following the conventions a function should clear the stack frame, which moves **esp** to **current ebp** and update ebp by popping the stack. The use of **ebp** helps clearing stack frames and localizing params.
 
 ````c
 mov %ebp, %esp
@@ -678,11 +679,11 @@ What kind of access is allowed (code/data, read/write)
 
 What privilege level is required (ring 0–3)
 
-The CPU uses segment selectors (like cs, ds) to index into the GDT and load the correct descriptor.
+The CPU uses **segment selectors** (like cs, ds) to index into the GDT and load the correct descriptor.
 ___
 
 ### GDT Initialization (`init_gdt`)
-This function initializes a larger, more complete GDT table than the earlier boot-time minimal GDT. It prepares the to support separate code/data segments for kernel.
+This function initializes a larger, more complete GDT table than the earlier boot-time minimal GDT. It prepares the descriptors to support separate code/data segments for kernel. Note that after loading the larger GDT, `gdt_reload` is used to **reset the cached descriptors**.
 
 ---
 
@@ -983,6 +984,95 @@ These macros perform pointer arithmetic to backtrack from the list node pointer 
 
 ___
 
+
+## Task Structure (`task_t`)
+
+The `task_t` structure represents a process in the kernel. It holds all necessary information for task scheduling, execution, and management.
+
+### Fields
+
+- **`state`**  
+  Represents the current **lifecycle state** of the task (e.g., `TASK_CREATED`, `TASK_RUNNING`, `TASK_SLEEP`).
+
+- **`status`**  
+  Holds the **exit status** or return code of the task.  
+  Useful for process termination and reporting.
+
+- **`pid`**  
+  The **process ID**, a unique identifier for this task.
+
+- **`name[TASK_NAME_SIZE]`**  
+  A character array storing the **name of the task**.
+
+- **`parent`**  
+  A pointer to the **parent task**, forming a parent-child relationship for task trees.
+
+- **`tss`**  
+  The **Task State Segment**, a hardware-supported structure for saving task context (registers, stack pointer, etc.).  
+  Required for **hardware task switching**.
+
+- **`tss_sel`**  
+  The **TSS selector** in the GDT.  
+  Used during `ljmp` to switch to this task.
+
+- **`curr_tick`**  
+  A **countdown timer** that decreases on every tick.  
+  When it reaches 0, the scheduler then **reschedules** another task.
+
+- **`sleep_tick`**  
+  Indicates how long the task should **remain asleep**.  
+  When it hits 0, the task becomes **eligible to run** again.
+
+- **`all_node`**  
+  A `list_node_t` used to link this task into the **global task list**.  
+  Tracks **all tasks** in the system.
+
+- **`run_node`**  
+  Another `list_node_t`, used in queues like **ready list** or **sleep list**.  
+  Helps the task move between different **scheduling states**.
+
+___
+
+### Task Manager: `task_manager_t`
+
+The kernel uses the `task_manager_t` structure to organize and manage the lifecycle and state of tasks using linked lists and a current task pointer.
+
+Key Fields in `task_manager_t`:
+
+- **`curr_task`**:  
+  A pointer to the **currently running task** on the CPU. This allows the kernel to quickly access the currrent running task.
+
+- **`ready_list`**:  
+  A list of tasks that are **ready to run**, including the current task. This is the main run queue from which the scheduler picks the next task to execute.
+
+- **`task_list`**:  
+  A comprehensive list containing **all tasks** that currently exist in the system, regardless of whether they are running, ready, or sleeping.
+
+---
+
+### Task Yielding (`sys_yield`, relinquishing the CPU)
+
+When a task voluntarily gives up the CPU by a system call, the operating system performs the following steps to switch to another runnable task using sys_yield:
+
+### Yielding Procedure
+
+1. **Remove the Current Task from the Ready List**  
+   The current task is removed from the front of the ready list using the function:
+   ````c
+   task_set_unready(curr_task);
+   ````
+2. Re-append the Task to the End of the Ready List
+This allows the task to run again later after others have had a chance:
+````c
+task_set_ready(curr_task);
+````
+3. Select the Next Task to Run
+The OS picks the **first task** in the ready list and switches context to it using:
+````c
+task_dispatch(next_task);
+````
+---
+
 ## Mutex
 
 1. Initialization: The mutex is set to be unlocked with no owner, and a list is created to hold tasks that might have to wait for the lock.
@@ -999,8 +1089,6 @@ ___
 
 ---
 
-  
-
 ## Semaphore
 
 1. Initialization: The semaphore is initialized with a specific count value, which represents the number of tasks that can proceed without waiting. A list is created to hold tasks that may need to wait.
@@ -1012,57 +1100,5 @@ ___
   
 
 3. Notifying (sem_notify): When a resource is freed or made available, the first task in the waiting list is notified and allowed to proceed. If no tasks are waiting, the semaphore count is increased, allowing future tasks to continue without waiting.
-
-  
-
----
-
-  
-
-## Task Structure
-
-1. state: This enumerates the different states a task can be in, such as TASK_CREATED, TASK_RUNNING, TASK_SLEEP, etc. It tracks the current state of the task.
-
-  
-
-2. status: This holds a status value for the task, representing exit code.
-
-  
-
-3. pid: A unique identifier for the task, often called the process ID.
-
-  
-
-4. name[TASK_NAME_SIZE]: A character array that stores the task’s name, making it easier to identify or debug.
-
-  
-
-5. parent: A pointer to the parent task structure. This establishes a parent-child relationship between tasks.
-
-  
-
-6. tss: The Task State Segment (TSS) is a structure used by hardware for task switching. It holds various CPU register values for a task.
-
-  
-
-7. tss_sel: This is the TSS selector, used to switch between tasks relying on hardware-assisted task switching.
-
-  
-
-8. curr_tick: This is a countdown timer for the task. Once it reaches 0, it resets, triggering to reschedule.
-
-  
-
-9. sleep_tick: Used to track how long the task should remain in a sleep state. When the counter reaches zero, the task can wake up.
-
-  
-
-10. all_node: A list node that links this task to a global list of all tasks, making task management easier.
-
-  
-
-11. run_node: A list node used to manage the task in different lists (e.g., ready list, sleep list). This allows the task to move between states like "ready" or "sleeping."
-
-  
 
 ---

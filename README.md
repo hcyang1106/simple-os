@@ -1212,3 +1212,23 @@ To keep the CPU occupied when there are **no runnable tasks**, the OS creates a 
     - If the waiting queue is not empty → assign ownership to the first waiting task and set its `locked_count` to 1.
 
 ---
+
+### Memory Management Overview
+
+<img src="images/bitmap.png" width="500">
+
+Memory management utlizes two structures:
+
+- **`bitmap_t`**  
+  This structure is responsible for tracking the usage of memory blocks.  
+  Each bit represents the state (used or free) of a fixed-size memory block.
+
+- **`mem_alloc_t`**  
+  This structure contains a `bitmap_t` and provides functions for allocating and freeing memory.  
+  It uses the bitmap to find free blocks and manage memory allocation dynamically.
+
+**Memory Layout of the system**:
+<img src="images/memory_layout.png" width="600">
+
+
+---

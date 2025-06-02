@@ -1170,6 +1170,26 @@ To keep the CPU occupied when there are **no runnable tasks**, the OS creates a 
 
 ---
 
+### Semaphore
+
+<img src="images/semaphore.png" width="500">
+
+- **Initialization**  
+  The semaphore is initialized with a count value representing how many tasks can proceed immediately.  
+  A waiting queue is also initialized to hold blocked tasks.
+
+- **Wait (`sem_wait`)**  
+  When a task wants to proceed:
+  - If count > 0 → decrement the count and allow the task to continue.
+  - If count == 0 → add the task to the waiting queue and block it.
+
+- **Notify (`sem_notify`)**  
+  When a resource becomes available:
+  - If the waiting queue is not empty → unblock the first task in the queue.
+  - If the queue is empty → increment the count to allow future tasks to proceed.
+
+---
+
 ## Mutex
 
 1. Initialization: The mutex is set to be unlocked with no owner, and a list is created to hold tasks that might have to wait for the lock.
@@ -1183,19 +1203,5 @@ To keep the CPU occupied when there are **no runnable tasks**, the OS creates a 
 3. Unlocking: When the owner releases the mutex, if other tasks are waiting, the first one in line is given ownership of the mutex and allowed to continue.
 
   
-
----
-
-## Semaphore
-
-1. Initialization: The semaphore is initialized with a specific count value, which represents the number of tasks that can proceed without waiting. A list is created to hold tasks that may need to wait.
-
-  
-
-2. Waiting (sem_wait): When a task wants to proceed, it checks if the semaphore count is greater than zero. If it is, the task decreases the count and continues. If the count is zero, the task is put on a waiting list, meaning it has to wait until it’s notified (when resources become available).
-
-  
-
-3. Notifying (sem_notify): When a resource is freed or made available, the first task in the waiting list is notified and allowed to proceed. If no tasks are waiting, the semaphore count is increased, allowing future tasks to continue without waiting.
 
 ---

@@ -1215,7 +1215,7 @@ To keep the CPU occupied when there are **no runnable tasks**, the OS creates a 
 
 ### Memory Management Overview
 
-<img src="images/bitmap.png" width="500">
+<img src="images/bitmap.png" width="300">
 
 Memory management utlizes two structures:
 

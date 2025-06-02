@@ -1098,6 +1098,78 @@ This ensures that all tasks take turns using the CPU in a **first-come, first-se
 
 ---
 
+### Protecting Shared Resources: Disabling Interrupts Safely
+
+When multiple tasks run concurrently, shared data structures must be protected from **race conditions**.
+
+The kernel uses **interrupt disabling** to create a critical section that ensures no context switch occurs while accessing shared resources.
+
+**Problem with Naive Enable/Disable**
+
+Simply using `irq_disable_global()` and `irq_enable_global()` around critical sections is unsafe:
+
+- If interrupts are **already disabled**, calling `irq_disable_global()` then `irq_enable_global()` will incorrectly **enable** them afterward.
+- This creates an inconsistency where a critical section unintentionally **re-enables interrupts** that should have remained disabled.
+
+**Solution: Save and Restore EFLAGS**
+
+The kernel solves this by recording the original interrupt state :
+
+````c
+irq_state_t irq_enter_protection(void) {
+    irq_state_t state = read_eflags();  // Save current EFLAGS (including IF)
+    irq_disable_global();               // Disable interrupts
+    return state;
+}
+````
+
+After the critical section, the original state is restored:
+````c
+void irq_leave_protection(irq_state_t state) {
+    write_eflags(state);  // Restore previous EFLAGS (not just blindly enable)
+}
+````
+This ensures that the interrupt flag (IF) is restored exactly as it was, preserving system correctness and avoiding accidental re-enabling.
+
+---
+
+### Task Sleeping and Idle Task
+
+**Sleeping Tasks**
+
+To allow tasks to pause execution temporarily, the OS provides **sleeping functionality** using:
+
+- `sleep_list`: A list in `task_manager_t` that holds all **currently sleeping tasks**.
+- `sleep_tick`: A field in each `task_t` structure that tracks how many **OS ticks** remain until the task should wake up.
+
+**Sleep Behavior (`sys_msleep`)**
+
+When a task sleeps:
+
+1. It is removed from the ready list.
+2. It is added to the `sleep_list`.
+3. Its `sleep_tick` is set to the number of ticks it should sleep.
+
+During each timer interrupt (e.g., PIT IRQ 0), the kernel:
+
+- Iterates through the `sleep_list`.
+- Decrements the `sleep_tick` of each task.
+- When `sleep_tick` reaches 0, the task is:
+  - Removed from `sleep_list`.
+  - Added back to the ready list (via `task_set_ready`).
+
+**Idle Task**
+
+To keep the CPU occupied when there are **no runnable tasks**, the OS creates a special **idle task**:
+
+- The idle task continuously executes the `hlt` instruction.
+- This halts the CPU until the **next interrupt** (e.g., from PIT) arrives.
+
+> The idle task is always present in the system but only runs when the ready list is empty.
+
+
+---
+
 ## Mutex
 
 1. Initialization: The mutex is set to be unlocked with no owner, and a list is created to hold tasks that might have to wait for the lock.

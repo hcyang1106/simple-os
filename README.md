@@ -1190,18 +1190,25 @@ To keep the CPU occupied when there are **no runnable tasks**, the OS creates a 
 
 ---
 
-## Mutex
+### Mutex
 
-1. Initialization: The mutex is set to be unlocked with no owner, and a list is created to hold tasks that might have to wait for the lock.
+<img src="images/mutex.png" width="500">
 
-  
+- **Initialization**  
+  The mutex is initialized in an unlocked state with no owner.  
+  A waiting queue is created to hold tasks that may need to wait.  
+  A `locked_count` field is set to 0 — it tracks how many times the current owner has acquired the lock (for reentrant locking).
 
-2. Locking: When a task tries to lock the mutex, if no one owns it, the task becomes the owner. If someone else already owns the mutex, the task is put on a waiting list until the mutex becomes available.
+- **Locking**  
+  When a task attempts to lock the mutex:
+  - If the mutex is unowned → the task becomes the owner, and `locked_count` is set to 1.
+  - If the task already owns the mutex → increment `locked_count`.
+  - If another task owns the mutex → the requesting task is added to the waiting queue and blocked.
 
-  
-
-3. Unlocking: When the owner releases the mutex, if other tasks are waiting, the first one in line is given ownership of the mutex and allowed to continue.
-
-  
+- **Unlocking**  
+  When the owning task releases the mutex:
+  - Decrement `locked_count`.
+  - If `locked_count` reaches 0 → release ownership.
+    - If the waiting queue is not empty → assign ownership to the first waiting task and set its `locked_count` to 1.
 
 ---

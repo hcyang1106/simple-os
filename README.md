@@ -1230,5 +1230,42 @@ Memory management utlizes two structures:
 **Memory Layout of the system**:
 <img src="images/memory_layout.png" width="600">
 
+Note that the bitmap is placed **right after the kernel**. We can do this by specifying the ending address of the kernel in **linker script**, and use it in c code.
+
+---
+
+### Two-Level Page Table (x86 Paging)
+
+<img src="images/page_table.png" width="400">
+
+x86 uses a **two-level paging system** to translate virtual addresses to physical addresses:
+
+1. **Page Directory** (Level 1):  
+   - Contains 1024 entries.
+   - Each entry points to a **Page Table**.
+   - Each entry covers **4MB** of virtual space (1024 * 4KB).
+
+2. **Page Table** (Level 2):  
+   - Also contains 1024 entries.
+   - Each entry maps to a **4KB** physical page.
+
+So the total addressable space is:  
+`1024 Page Directory Entries × 1024 Page Table Entries × 4KB = 4GB`
+
+**Why Two-Level Page Table Saves Space**
+
+- The **Page Directory** always exists and has 1024 entries.
+- But the **Page Tables** are **only allocated when needed**.
+
+> If a Page Directory entry is marked **invalid**, then:
+> - The corresponding **Page Table is not allocated**.
+> - The **4MB range** it would cover is treated as unmapped.
+
+---
+
+### Key Benefit
+
+Two-level paging helps to **reduce memory usage** and **improve scalability** in systems that don’t need the full 4GB address space.
+
 
 ---

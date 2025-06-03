@@ -1236,7 +1236,7 @@ Note that the bitmap is placed **right after the kernel**. We can do this by spe
 
 ### Two-Level Page Table (x86 Paging)
 
-<img src="images/page_table.png" width="400">
+<img src="images/page_table.png" width="500">
 
 x86 uses a **two-level paging system** to translate virtual addresses to physical addresses:
 

@@ -1228,7 +1228,7 @@ Memory management utlizes two structures:
   It uses the bitmap to find free blocks and manage memory allocation dynamically.
 
 **Memory Layout of the system**:
-<img src="images/memory_layout.png" width="600">
+<img src="images/memory_layout.png" width="700">
 
 Note that the bitmap is placed **right after the kernel**. We can do this by specifying the ending address of the kernel in **linker script**, and use it in c code.
 
@@ -1236,7 +1236,7 @@ Note that the bitmap is placed **right after the kernel**. We can do this by spe
 
 ### Two-Level Page Table (x86 Paging)
 
-<img src="images/page_table.png" width="550">
+<img src="images/page_table.png" width="600">
 
 x86 uses a **two-level paging system** to translate virtual addresses to physical addresses:
 
@@ -1260,8 +1260,5 @@ So the total addressable space is:
 > If a Page Directory entry is marked **invalid**, then:
 > - The corresponding **Page Table is not allocated**.
 > - The **4MB range** it would cover is treated as unmapped.
-
----
-
 
 ---

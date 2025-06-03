@@ -1236,7 +1236,7 @@ Note that the bitmap is placed **right after the kernel**. We can do this by spe
 
 ### Two-Level Page Table (x86 Paging)
 
-<img src="images/page_table.png" width="500">
+<img src="images/page_table.png" width="550">
 
 x86 uses a **two-level paging system** to translate virtual addresses to physical addresses:
 
@@ -1262,10 +1262,6 @@ So the total addressable space is:
 > - The **4MB range** it would cover is treated as unmapped.
 
 ---
-
-### Key Benefit
-
-Two-level paging helps to **reduce memory usage** and **improve scalability** in systems that don’t need the full 4GB address space.
 
 
 ---

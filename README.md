@@ -1287,7 +1287,6 @@ Modern x86 systems use **segmentation + paging** to translate memory addresses t
 
 3. **Physical Address**   
     The linear address is further translated to a physical address using the paging mechanism.    
-    
     The CPU uses page directories and page tables to map linear address → physical address    
 4. **Flat Memory Model (Used in Modern OS)**    
     The base in GDT segment descriptors is **set to 0**   

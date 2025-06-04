@@ -1282,24 +1282,16 @@ Modern x86 systems use **segmentation + paging** to translate memory addresses t
    Segment selectors are **set by the OS, not the compiler**.
 
 2. **Linear Address**
- The linear address is obtained by looking up the segment selector in the GDT (Global Descriptor Table).
-
-    Adding the **base address** from the GDT descriptor to the offset
-
-    **linear address = base (from GDT) + offset**
- This address represents the location in a flat 4GB virtual address space.
+The linear address is obtained by looking up the segment selector in the GDT (Global Descriptor Table).
+Adding the **base address** from the GDT descriptor to the offset **linear address = base (from GDT) + offset**
+This address represents the location in a flat 4GB virtual address space.
 
 3. **Physical Address**
- The linear address is further translated to a physical address using the paging mechanism.
-
-    The CPU uses page directories and page tables to map:
-
-    linear address → physical address
+The linear address is further translated to a physical address using the paging mechanism.
+The CPU uses page directories and page tables to map linear address → physical address
 4. **Flat Memory Model (Used in Modern OS)**
-
-    The base in GDT segment descriptors is **set to 0**
-
-    So, **logical address offset == linear address**.
- This simplifies memory addressing, as segmentation has no visible effect.
+The base in GDT segment descriptors is **set to 0**
+So, **logical address offset == linear address**.
+This simplifies memory addressing, as segmentation has no visible effect.
 
 ---

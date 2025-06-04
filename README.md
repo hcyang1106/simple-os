@@ -1294,3 +1294,64 @@ Modern x86 systems use **segmentation + paging** to translate memory addresses t
     This simplifies memory addressing, as segmentation has no visible effect.   
 
 ---
+
+### Kernel Page Table Setup
+
+The `create_kernel_table()` function is responsible for setting up the page table for the kernel. It is called within the `memory_init()` function, and the resulting page table is registered for system-wide use.
+
+#### Identity Mapping
+- **Definition**: The entire 128MB kernel space is identity-mapped, meaning virtual addresses equal physical addresses.
+- **Importance**: Critical for kernel functionality, as the kernel relies on the page table to access memory. Without identity mapping, unmapped memory would be inaccessible.
+
+#### Permission Management
+- **Approach**: Different memory regions receive specific permissions:
+  - **.text section (code)**: Read-only to protect executable code.
+  - **.data, display memory, extended memory**: Writable to allow modifications.
+- **Implementation**:
+  - Permissions are set at the Page Table Entry (PTE) level for fine-grained control.
+  - Page Directory Entries (PDE) are marked accessible and writable for simplicity.
+
+#### Mapping Structure
+The `kernel_map` array defines the memory regions to be mapped:
+
+````c
+static memory_map_t kernel_map[] = {
+    {0, &s_text, 0, PTE_W},                        // Writable bootstrapping section
+    {&s_text, &e_text, &s_text, 0},                // .text section: read-only
+    {&s_data, (void*)MEM_EBDA_START - 1, &s_data, PTE_W}, // .data section: writable
+    {(void*)CONSOLE_DISP_START, (void*)CONSOLE_DISP_END, 
+     (void*)CONSOLE_DISP_START, PTE_W},           // Display memory
+    {(void*)MEM_EXT_START, (void*)MEM_EXT_END - 1, 
+     (void*)MEM_EXT_START, PTE_W}                 // Extended memory
+};
+````
+
+- **Fields**:
+  - First: Starting virtual address.
+  - Second: Ending virtual address.
+  - Third: Starting physical address.
+  - Fourth: Permission flags (e.g., `PTE_W` for writable, `0` for read-only).
+
+#### Key Function: `memory_create_map`
+````c
+int memory_create_map(pde_t *page_dir, 
+                      uint32_t vstart, 
+                      uint32_t pstart, 
+                      int page_count, 
+                      uint32_t perm);
+````
+
+#### Functionality
+- **Purpose**: Configures page directory and page table entries to map virtual addresses to physical addresses.
+- **Parameters**:
+  - `page_dir`: Pointer to the page directory.
+  - `vstart`: Starting virtual address of the range.
+  - `pstart`: Starting physical address to map to.
+  - `page_count`: Number of pages to map.
+  - `perm`: Permission flags (e.g., `PTE_W` for writable, `0` for read-only).
+- **Behavior**:
+  - Fills in Page Directory Entries (PDE) and Page Table Entries (PTE).
+  - Establishes a mapping from the virtual address range (`vstart`) to the physical address range (`pstart`).
+  - Applies the specified permissions to the mapped pages.
+
+---

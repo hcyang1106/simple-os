@@ -1312,7 +1312,7 @@ The `create_kernel_table()` function is responsible for setting up the page tabl
   - Page Directory Entries (PDE) are marked accessible and writable for simplicity.
 
 #### Mapping Structure
-The `kernel_map` array defines the memory regions to be mapped:
+The `kernel_map` array defines the memory regions to be mapped, the specified starting (e.g. s_text) and ending address (e.g. e_text) are specified in the linker script:
 
 ````c
 static memory_map_t kernel_map[] = {

@@ -1355,3 +1355,37 @@ int memory_create_map(pde_t *page_dir,
   - Applies the specified permissions to the mapped pages.
 
 ---
+
+### User Process Page Table Creation
+
+The following functions are used to create and configure these page tables:
+
+#### memory_create_uvm()
+Creates the initial page directory and kernel mappings for a user process.
+
+- **Allocates a new page directory** for the user process.
+- For kernel space, it does not create new page tables—instead:
+  - **Reuses the kernel's page tables** by copying Page Directory Entries (PDEs) that point to `kernel_page_dir`.
+  - This allows user processes to access kernel space (with proper permissions) without duplicating kernel mappings.
+
+#### alloc_mem_for_task(...)
+````c
+int alloc_mem_for_task(uint32_t page_dir, 
+                       uint32_t page_count, 
+                       uint32_t vstart, 
+                       uint32_t perm);
+````
+Allocates physical pages and maps them into the user process’s address space.
+
+- **`page_dir`**: The page directory of the user process.
+- **`page_count`**: Number of pages to allocate.
+- **`vstart`**: Starting virtual address where the memory should be mapped.
+- **`perm`**: Page permissions (e.g., user-accessible, writable).
+
+#### Note
+- For user code, the virtual address should be above `0x80000000`, separating user space from kernel space.
+- Each mapping fills in corresponding page directory and page table entries with physical pages allocated for the user.
+- Kernel code/data and user code/data are separated so that they don't interfere each other and we can set different permissions for each one.
+
+
+---

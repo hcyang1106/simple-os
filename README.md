@@ -1389,3 +1389,60 @@ Allocates physical pages and maps them into the user process’s address space.
 
 
 ---
+
+### Main Task Overview
+
+The **Main Task** serves as the **initial user process** that runs after entering the kernel.
+
+- **Compiled with Kernel**  
+  - The main task is **linked and built** together with the kernel code.  
+  - It locates **right after the kernel**, which is controlled by the linker script.
+
+- **First Running Task**  
+  - During system initialization:
+    - The **main task is assigned as the current task**.
+    - The **TSS (Task State Segment)** of the CPU is loaded with the **main task's TSS**.
+    - The **page table** (`cr3` register) is also set to use the **main task’s page directory**, which points to the kernel's identity-mapped space.
+
+---
+
+
+### Separating Kernel and Main Task with Linker Script
+
+To separate the **kernel** and the **main task**, a custom linker script is used. This allows assigning different **virtual** and **physical** addresses for main task.
+
+````ld
+. = 0x80000000;
+
+PROVIDE(s_main_task = LOADADDR(.main_task));
+.main_task : AT(e_data) {
+    *main_task_entry*(.text .rodata .bss .data)
+    *main_task*(.text .rodata .bss .data)
+    *lib_syscall*(.text .rodata .bss .data)
+}
+PROVIDE(e_main_task = LOADADDR(.main_task) + SIZEOF(.main_task));
+````
+
+#### Explanation
+- . = 0x80000000
+This sets the virtual address (link-time address) of the .main_task section to start at 0x80000000.
+
+- AT(e_data)
+This sets the physical load address for the .main_task section. The e_data symbol typically marks the end of kernel data, so .main_task will be loaded just after that in physical memory.
+
+- LOADADDR(.main_task)
+This gets the physical load address for the section.
+
+#### Purpose
+This setup makes the main task's virtual address start at 0x80000000, placing it in the user space region.
+
+The main task code and data are linked separately from the kernel but **included in the same binary**.
+
+At runtime, the OS will:
+
+Allocate user memory starting from 0x80000000 (currently allocating **10 pages**).
+
+**Copy the code/data** from the kernel area (physical memory) to the corresponding virtual address space of the user process.
+
+
+---

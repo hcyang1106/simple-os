@@ -1444,10 +1444,10 @@ Allocate user memory starting from 0x80000000 (currently allocating **10 pages**
 
 **Copy the code/data** from the kernel area (physical memory) to the corresponding virtual address space of the user process.
 
-**Physical Memory Layout:**  
+#### Physical Memory Layout:  
 <img src="images/memory_layout_with_main_task.png" width="700">
 
-**Process Memory Layout:**  
+#### Process Memory Layout:
 <img src="images/process_memory_layout.png" width="300">
 
 

@@ -1409,7 +1409,7 @@ The **Main Task** serves as the **initial user process** that runs after enterin
 
 ### Separating Kernel and Main Task with Linker Script
 
-To separate the **kernel** and the **main task**, a custom linker script is used. This allows assigning different **virtual** and **physical** addresses for main task.
+To separate the **kernel** and the **main task**, a custom linker script is used. This allows assigning different **virtual** and **physical** addresses for main task. In kernel.lds:
 
 ````ld
 . = 0x80000000;
@@ -1443,6 +1443,12 @@ At runtime, the OS will:
 Allocate user memory starting from 0x80000000 (currently allocating **10 pages**).
 
 **Copy the code/data** from the kernel area (physical memory) to the corresponding virtual address space of the user process.
+
+**Physical Memory Layout:**
+<img src="images/memory_layout_with_main_task.png" width="700">
+
+**Process Memory Layout:**
+<img src="images/process_memory_layout.png" width="300">
 
 
 ---

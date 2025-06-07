@@ -1452,3 +1452,38 @@ Allocate user memory starting from 0x80000000 (currently allocating **10 pages**
 
 
 ---
+
+### Notes on Exception Handling and Privilege Level Switching
+
+- User processes typically run at **privilege level 3 (CPL = 3)**.
+- The kernel code run at **privilege level 0**.
+
+#### Privilege Switching on Exceptions
+- When an **exception occurs** (e.g., divide error), the CPU:
+  - Looks up the handler in the **IDT**.
+  - **Ignores the DPL** in the IDT descriptor for exceptions (because the CPU triggered it, not software).
+  - **Switches to a lower privilege level (usually 0, depending on DPL in GDT descriptor)** if needed.
+  - Uses **SS0 and ESP0** from the **TSS** to switch to the kernel stack, therefore we need to setup different stack for priviledge level 0 and priviledge level 3.
+
+#### IDT Descriptor DPL Behavior
+- The **DPL in the IDT descriptor** is only used to control **which privilege levels are allowed to use `int X` software interrupts**.
+- For example, `int 0x80` must have DPL = 3 to be callable from user space.
+- For **exceptions like divide-by-zero**, the DPL is **not checked**.
+
+#### Stack Switching and SS/ESP Pushing
+- If a **privilege level change occurs**, the CPU:
+  - Switches to the kernel stack (SS0, ESP0 from TSS).
+  - **Pushes the user SS and ESP** onto the kernel stack, so that ss and esp can later be recovered.
+- If **no privilege level change occurs**, the CPU:
+  - Continues using the current stack.
+  - **Does not push SS and ESP**, since it's already in the correct stack space.
+
+#### Before Lowering User Process Priviledge Level
+- Earlier we do not separate different priviledge levels, therefore user code runs at **privilege level 0**.
+- All segments (code/data/stack) use GDT descriptors with **DPL = 0**.
+- When an exception occurs:
+  - No privilege switch is needed.
+  - The CPU continues using the current stack.
+  - **SS and ESP are not pushed (since using the same stack)** during the exception.
+
+---

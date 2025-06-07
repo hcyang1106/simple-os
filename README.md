@@ -1520,3 +1520,34 @@ ESP → sets the user-mode stack pointer
 SS → sets the user-mode stack segment
 
 ---
+
+### Separate Stacks for Different Privilege Levels
+
+<img src="images/different_level_stacks.png" width="300">
+
+#### Why Two Stacks Are Required
+
+When switching between privilege levels (e.g., from **kernel mode (CPL 0)** to **user mode (CPL 3)**), the CPU requires separate stacks for each level to ensure **memory protection** and **context isolation**.
+
+Therefore, we must create and manage **two separate stacks** for each process:
+
+#### 1. **User Mode Stack (CPL = 3)**
+
+- This stack is used **when the process runs in user mode**.
+- The stack pointer (`ESP`) must be set to the **top of the allocated user space**.
+- We allocate **10 pages** (each 4 KB) for the user process code and data:
+  - The **user stack starts at the very top** of those 10 pages.
+  - Example:
+    ```c
+    user_esp = USER_PROCESS_BASE + 10 * PAGE_SIZE;
+    ```
+
+#### 2. **Kernel Mode Stack (CPL = 0)**
+
+- When the CPU switches to kernel mode (e.g., due to system calls or exceptions), it **automatically uses the kernel stack**.
+- This stack is typically:
+  - **One page (4 KB)** in size
+  - Located in **kernel space**
+  - Set in the **TSS (Task State Segment)** fields `ESP0` and `SS0`
+
+---

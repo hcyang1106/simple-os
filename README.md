@@ -1487,3 +1487,36 @@ Allocate user memory starting from 0x80000000 (currently allocating **10 pages**
   - **SS and ESP are not pushed (since using the same stack)** during the exception.
 
 ---
+
+### Switching from Kernel (Privilege Level 0) to User Process (Privilege Level 3)
+
+<img src="images/stack_frame_of_exception.png" width="600">
+
+To transfer control from the kernel to a **user process running at privilege level 3**, we simulate an exception return using the `iret` instruction.
+
+
+#### Key Steps for Privilege Level Switch
+
+1. **Manually Push the Return Context onto the Kernel Stack**  
+   In kernel mode (CPL = 0), we prepare the CPU to switch to user mode by pushing the following values:
+
+   ````assembly
+   push $user_ss      ; Segment selector for user data (DPL=3)
+   push $user_esp     ; Stack pointer for user mode
+   push $eflags       ; EFLAGS register
+   push $user_cs      ; Segment selector for user code (CPL=3)
+   push $user_eip     ; Entry point of user process
+   ````
+
+2. **Execute iret Instruction**
+The iret pops the values off the stack in the following order:
+
+EIP → sets the instruction pointer
+CS → sets the code segment and privilege level
+EFLAGS → restores flags
+
+**(If privilege level change is detected)** it also pops:
+ESP → sets the user-mode stack pointer
+SS → sets the user-mode stack segment
+
+---

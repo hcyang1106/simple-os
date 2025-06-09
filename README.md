@@ -1583,13 +1583,13 @@ System calls allow user-level processes (CPL = 3) to request services from the k
 
 #### 3. Summary of Privilege Checks
 
-<img src="images/call_gate_descriptor.png" width="400">
+<img src="images/gpt_table.png" width="500">
 
 ---
 
 ### System Call Handling After `lcall`
 
-<img src="images/system_call_stacks.png" width="400">
+<img src="images/system_call_stacks.png" width="530">
 
 
 1. **Privilege Level Switch**  

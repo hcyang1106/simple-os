@@ -1554,7 +1554,7 @@ Therefore, we must create and manage **two separate stacks** for each process:
 
 ### How System Calls Work with Call Gates
 
-<img src="images/call_gate_descriptor.png" width="450">
+<img src="images/call_gate_descriptor.png" width="550">
 
 System calls allow user-level processes (CPL = 3) to request services from the kernel. My implementation of system calls is via **call gates** defined in the **GDT (Global Descriptor Table)**.
 

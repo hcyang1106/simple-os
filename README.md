@@ -1551,3 +1551,34 @@ Therefore, we must create and manage **two separate stacks** for each process:
   - Set in the **TSS (Task State Segment)** fields `ESP0` and `SS0`
 
 ---
+
+### How System Calls Work with Call Gates
+
+<img src="images/call_gate_descriptor.png" width="450">
+
+System calls allow user-level processes (CPL = 3) to request services from the kernel. My implementation of system calls is via **call gates** defined in the **GDT (Global Descriptor Table)**.
+
+#### 1. **Call Gate Descriptor in GDT**
+
+- A **call gate** is a special GDT descriptor that allows **controlled privilege level transition**.
+- The call gate stores:
+  - The **segment selector** of the target kernel code (typically kernel code segment).
+  - The **offset** of the kernel handler function.
+  - The **DPL (Descriptor Privilege Level)** of the call gate.
+
+#### 2. **Invoking a System Call from User Process**
+
+- To trigger the system call:
+  ````assembly
+  lcall far [selector]  ; selector must point to the call gate descriptor
+  ````
+- RPL (Requested Privilege Level) of the selector must be 3 because the calling process is running at CPL = 3.
+  - CPU checks max(CPL, RPL) <= DPL of the call gate.
+  - So if DPL = 3, and CPL = RPL = 3 → pass.
+  - If DPL < max(CPL, RPL) → the call is rejected.
+
+- The target handler itself is located in kernel space, which has privilege level 0.
+
+- The CPU performs the privilege transition, loading the new CS, EIP, SS, and ESP based on the **kernel-mode TSS settings**.
+
+---

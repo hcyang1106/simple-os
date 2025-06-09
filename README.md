@@ -1583,7 +1583,7 @@ System calls allow user-level processes (CPL = 3) to request services from the k
 
 #### 3. Summary of Privilege Checks
 
-<img src="images/gpt_table.png" width="500">
+<img src="images/gpt_table.png" width="600">
 
 ---
 

@@ -1490,7 +1490,7 @@ Allocate user memory starting from 0x80000000 (currently allocating **10 pages**
 
 ### Switching from Kernel (Privilege Level 0) to User Process (Privilege Level 3)
 
-<img src="images/stack_frame_of_exception.png" width="600">
+<img src="images/stack_frame_of_exception.png" width="500">
 
 To transfer control from the kernel to a **user process running at privilege level 3**, we simulate an exception return using the `iret` instruction.
 
@@ -1589,7 +1589,7 @@ System calls allow user-level processes (CPL = 3) to request services from the k
 
 ### System Call Handling After `lcall`
 
-<img src="images/system_call_stacks.png" width="530">
+<img src="images/system_call_stacks.png" width="480">
 
 
 1. **Privilege Level Switch**  

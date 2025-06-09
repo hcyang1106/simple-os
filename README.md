@@ -1581,4 +1581,48 @@ System calls allow user-level processes (CPL = 3) to request services from the k
 
 - The CPU performs the privilege transition, loading the new CS, EIP, SS, and ESP based on the **kernel-mode TSS settings**.
 
+#### 3. Summary of Privilege Checks
+
+<img src="images/call_gate_descriptor.png" width="400">
+
+---
+
+### System Call Handling After `lcall`
+
+<img src="images/system_call_stacks.png" width="400">
+
+
+1. **Privilege Level Switch**  
+   When `lcall` is executed, the CPU switches from **privilege level 3 to 0**, using the stack info from the TSS:
+   - It switches to the **level 0 stack**
+   - Pushes the **previous `SS` and `ESP`** onto the new stack
+
+2. **Parameter Transfer**  
+   The CPU then:
+   - Copies the number of parameters (specified in the **call gate descriptor**) from the **level 3 stack** to the **level 0 stack**
+   - Pushes **`CS` and `EIP`** to transfer control
+
+3. **Extra Register Preservation**  
+   In the system call handler (written in assembly), we:
+   - Push general-purpose registers (`EAX`, `EBX`, etc.)
+   - Push segment registers (`DS`, `ES`, `FS`, `GS`)
+   - This mirrors what we do for exception handling, ensuring registers can be restored after the syscall
+
+4. **Shared Call Gate**  
+   - Only **one call gate** is used for all system calls to conserve GDT entries
+   - The syscall handler uses one of the passed parameters to determine the actual function
+
+5. **System Call Workflow**  
+   The full system call sequence:
+   - User pushes syscall parameters onto stack
+   - Executes `lcall` with a selector referencing the call gate
+   - CPU performs privilege switch and parameter copying
+   - Kernel syscall handler:
+     - Retrieves the syscall ID from parameters
+     - Uses it to index into `sys_table` and invoke the correct function pointer
+
+6. **Parameter Order Detail**  
+   - The number of parameters copied by CPU ≠ number of arguments needed by the actual system call (e.g. we use five arguments but msleep needs only one). 
+   - That’s okay: the parameters are pushed to stack in **reverse order**, that is, the needed arguments are at the **bottom** of the stack. The syscall function can still read them correctly using ebp.
+
 ---

@@ -27,7 +27,7 @@ To build and run the OS on MacOS, you’ll need the following:
 
 | `x86_64-elf-gdb` | Cross-debugger to connect to QEMU (used for remote debugging) |
 
-| `ld`, `as`, `objcopy`, `objdump`, `readelf` | Tools for ELF analysis and binary conversion |
+| `ld`, `as`, `objcopy`, `objdump`, `readelf` | Tools for ELF analysis and binary conversion |  
 | `CMake Tools` and `C/C++ Extension` | Make CMake configs and debugger setup more convenient|
 
   

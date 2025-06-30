@@ -263,7 +263,7 @@ To ensure that the linker places the boot code at the correct physical memory ad
 
   
 
-Place `start.S`  **first** in the source list to ensure it becomes the entry point of the final binary:
+Place `start.S`  **first** in the source list to ensure it becomes the entry point of the final binary (**boot.elf**):
 
   
 
@@ -281,7 +281,7 @@ This guarantees that the start.S (boot) code is linked first and becomes the fir
 
   
 
-#### 2. Linker Address Configuration
+#### 2. Linker Address Configuration (Make Symbol Addresses Start from 0x7c00)
 
   
 
@@ -328,7 +328,7 @@ The loader is composed of the following files:
 
   
 
-The loader is built as an ELF file, then converted into a `.bin` by post-build commands. This binary is then written to the correct disk sector by an image creation script (using `script/img-write-os`).
+The loader is built as an ELF file, then converted into a `.bin` by post-build commands. This binary is then written to the correct disk sector by an image creation script (using `script/img-write-os`). Note that **only boot and loader** are converted into bin files.
 
 ---
 
@@ -383,7 +383,7 @@ It begins execution in 16-bit mode and switches to 32-bit protected mode after c
 
   
 
-The `enter_protect_mode()` function transitions the CPU from **real mode** to **protected mode**. This involves **enabling the A20 line**, **setting up the GDT**, **flipping the PE bit in `CR0`**, and **performing a far jump to 32-bit code**.
+The `enter_protect_mode()` function transitions the CPU from **real mode** to **protected mode**. This involves **turning off interrupts**, **enabling the A20 line**, **setting up the GDT**, **flipping the PE bit in `CR0`**, and **performing a far jump to 32-bit code**.
 
   
 
@@ -1678,6 +1678,15 @@ System calls allow user-level processes (CPL = 3) to request services from the k
    - For example:
      - `x86_64-elf-gdb` may allow switching between variants like `i386` and `i8086`, but it **cannot** switch to architectures like **ARM** or **RISC-V**.
      - To debug a completely different architecture (like ARM or RISC-V), you need a GDB that was built specifically for that architecture (e.g., `arm-none-eabi-gdb`, `riscv64-unknown-elf-gdb`).
+
+9. **Why Does the A20 Gate Exist?**
+   - In the original 8086 architecture, the CPU had a **20-bit address bus**, which meant it could address up to **1 MB (2²⁰ bytes)**. If a program accessed memory beyond 1 MB (like at address `0xFFFF:0x0010` = `0x100000`), the address would **wrap around to 0x00000**, due to physical limitations.
+   - However, later CPUs (like the 80286 and above) had **address buses wider than 20 bits** (e.g., 24-bit, 32-bit), so addresses past 1 MB would no longer automatically wrap — they would access actual memory beyond 1 MB.
+   - To maintain **backward compatibility** with software that relied on this wrapping behavior, the **A20 gate** was introduced. It controls the **21st address line (A20)**:
+     - When **A20 is disabled**, addresses wrap around at 1 MB (just like 8086).
+     - When **A20 is enabled**, addresses beyond 1 MB behave normally, allowing access to extended memory.
+   - This gate acts like a **switch** to turn wraparound **on or off**, depending on whether the CPU is in real mode (compatibility) or protected mode (advanced features).
+
 
 
 

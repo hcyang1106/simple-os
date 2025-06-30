@@ -145,7 +145,7 @@ Attaches a second virtual disk (for file system or user programs).
 
   - Symbol information
 
-  - Debug info (DWARF sections)
+  - Debug info (DWARF sections) => Generated when compiled in debug mode
 
   
 
@@ -160,20 +160,14 @@ Attaches a second virtual disk (for file system or user programs).
 1. Write disk images and run QEMU.
 
 2. Press the **Debug** button in VSCode.
+   - VSCode launches `x86_64-elf-gdb` and connects to QEMU.
+   - GDB pauses at `0x7C00` (bootloader entry point).
+   - GDB loads ELF files and debug info using `program` and `add-symbol-file`.
 
-3. VSCode launches `x86_64-elf-gdb` and connects to QEMU.
-
-4. GDB pauses at `0x7C00` (bootloader entry point).
-
-5. GDB loads ELF files and debug info using `program` and `add-symbol-file`.
-
-6. You can now:
-
-- Step through source or assembly
-
-- Inspect memory, registers, and stack
-
-- Set and hit breakpoints
+3. You can now:
+   - Step through source or assembly
+   - Inspect memory, registers, and stack
+   - Set and hit breakpoints
 
   
 
@@ -201,17 +195,13 @@ The Boot stage performs two main tasks:
 
   
 
-1.  **Loads the Loader from disk**
-
-The boot code uses BIOS interrupts (e.g., `INT 13h`) to read sectors from disk into memory. Specifically, it loads the "Loader" program into physical memory at address `0x8000`.
-
-  
-
-2.  **Jumps to the Loader**
-
-After loading, Boot uses a **function pointer** technique in C to jump to the Loader's entry point. For example:
+1.  **Loads the Loader from disk** 
+   - The boot code uses BIOS interrupts (e.g., `INT 13h`) to read sectors from disk into memory. Specifically, it loads the "Loader" program into physical memory at address `0x8000`.
 
   
+
+2.  **Jumps to the Loader** 
+   - After loading, Boot uses a **function pointer** technique in C to jump to the Loader's entry point. For example:
 
 ````c
 
@@ -219,7 +209,7 @@ After loading, Boot uses a **function pointer** technique in C to jump to the Lo
 
   
 
-void  boot_entry(void) {
+void boot_entry(void) {
 
 ((void (*)(void))LOADER_START_ADDR)(); // jump to loader code
 
@@ -1644,10 +1634,11 @@ System calls allow user-level processes (CPL = 3) to request services from the k
 4. **`objdump` Tool**
    - `objdump` is used to **disassemble ELF files** and inspect them in a **human-readable format**.
 
-5. **CMake Configuration**
-   - CMake helps define:
+5. **CMake Tools**
+   - CMake Tools helps define:
      - Which **compiler** to use (e.g., `x86_64-elf-gcc`)
      - What **build type** to use (`Debug`, `Release`, etc.)
+   - When "build" button is pressed, the tool goes through a sequence of processes and eventually generates the executable file.
    - Alternatively, this configuration can be done using **command-line options** when compiling manually.
 
 6. **Purpose of `launch.json` Configuration**
@@ -1681,6 +1672,13 @@ System calls allow user-level processes (CPL = 3) to request services from the k
        - Set breakpoints (e.g., insert `0xCC`).
        - Step through instructions (`PTRACE_SINGLESTEP`).
        - Get/set register values.
+
+8. **Why a cross debugger is needed**
+   - Although GDB provides the `set architecture` command to change the target architecture at runtime, this command only works **within the range of architectures that the GDB binary was built to support**.
+   - For example:
+     - `x86_64-elf-gdb` may allow switching between variants like `i386` and `i8086`, but it **cannot** switch to architectures like **ARM** or **RISC-V**.
+     - To debug a completely different architecture (like ARM or RISC-V), you need a GDB that was built specifically for that architecture (e.g., `arm-none-eabi-gdb`, `riscv64-unknown-elf-gdb`).
+
 
 
 

@@ -28,8 +28,8 @@ To build and run the OS on MacOS, you’ll need the following:
 | `x86_64-elf-gdb` | Cross-debugger to connect to QEMU (used for remote debugging) |
 
 | `ld`, `as`, `objcopy`, `objdump`, `readelf` | Tools for ELF analysis and binary conversion |  
-  
-| `CMake Tools` and `C/C++ Extension` | Make CMake configs and debugger setup more convenient|
+
+| `CMake Tools` and `C/C++ Extension` | Make CMake configs and debugger setup more convenient |
 
   
 
@@ -1627,3 +1627,62 @@ System calls allow user-level processes (CPL = 3) to request services from the k
    - That’s okay: the parameters are pushed to stack in **reverse order**, that is, the needed arguments are at the **bottom** of the stack. The syscall function can still read them correctly using ebp.
 
 ---
+
+## Additional Notes
+
+1. **`targetArchitecture` in `launch.json`**
+   - The `"targetArchitecture": "x86"` field is used by **VSCode’s debugging frontend**, **not the actual debugger**.
+
+2. **Host-Installed Toolchain**
+   - All build and debug tools (such as **CMake**, the **cross-compiler**, and **GDB**) are installed on the **host system** (e.g., macOS).
+   - These tools are **not** installed or run inside the **QEMU virtual machine**.
+
+3. **ELF and Binary Formats**
+   - Object files (`.o`) and output files like `.elf` are in **ELF (Executable and Linkable Format)** on Linux.
+   - If a raw binary is needed (e.g., for bootloaders), tools like `objcopy` can convert ELF to `.bin` format.
+
+4. **`objdump` Tool**
+   - `objdump` is used to **disassemble ELF files** and inspect them in a **human-readable format**.
+
+5. **CMake Configuration**
+   - CMake helps define:
+     - Which **compiler** to use (e.g., `x86_64-elf-gcc`)
+     - What **build type** to use (`Debug`, `Release`, etc.)
+   - Alternatively, this configuration can be done using **command-line options** when compiling manually.
+
+6. **Purpose of `launch.json` Configuration**
+   - The `launch.json` file in VSCode is primarily used to configure the **debugger**.
+   - It sets up:
+     - The **target program** to debug (e.g., `boot.elf`)
+     - The **GDB server address** (e.g., `127.0.0.1:1234`) to connect to QEMU or another remote target
+     - **Symbol files** to be loaded (via `-file-symbol-file` or `add-symbol-file`)
+
+   - Loading symbol files allows:
+     - Displaying **function names** and **variable names** during debugging
+     - Setting **breakpoints** by function name (e.g., `main`)
+     - Printing **variable values** by name (e.g., `print my_variable`)
+
+7. **How a debugger works (from ChatGPT)**
+   - GDB uses **`fork()` + `ptrace()`** to debug a program.
+   - `ptrace()` lets GDB control and observe it.
+
+   - **GDB calls `fork()`**
+     - Child: runs the target program.
+     - Parent: stays as GDB.
+
+   - **Child (debuggee)**
+     - Calls `ptrace(PTRACE_TRACEME)` → tells the kernel it wants to be traced.
+     - Calls `execve()` → replaces itself with the target binary (e.g., `a.out`).
+
+   - **Parent (GDB)**
+     - Uses `waitpid()` to wait for the child to stop.
+     - Uses `ptrace()` to:
+       - Read/write memory.
+       - Set breakpoints (e.g., insert `0xCC`).
+       - Step through instructions (`PTRACE_SINGLESTEP`).
+       - Get/set register values.
+
+
+
+
+

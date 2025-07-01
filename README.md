@@ -701,7 +701,7 @@ Interrupts are triggered by external, asynchronous events (e.g., keyboard input,
 
 Exceptions are triggered internally by the CPU during instruction execution (e.g., divide-by-zero, page fault).
 
-Both use the **IDT** to determine how to handle the event — by jumping to the corresponding handler function defined in the IDT entry.
+**Both use the IDT to determine how to handle the event** — by jumping to the corresponding handler function defined in the IDT entry. However, the vector (number) for exceptions are usually fixed, which are defined by CPU. Vectors (numbers) for interrupts can vary on the contrary.
 
 ---
 

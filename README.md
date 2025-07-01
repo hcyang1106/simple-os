@@ -1687,6 +1687,15 @@ System calls allow user-level processes (CPL = 3) to request services from the k
      - When **A20 is enabled**, addresses beyond 1 MB behave normally, allowing access to extended memory.
    - This gate acts like a **switch** to turn wraparound **on or off**, depending on whether the CPU is in real mode (compatibility) or protected mode (advanced features).
 
+10. **Why does GDT descriptor need to specify it's a code/data segment?**
+   - Some bits represent different meanings for code and data segments, and priviledge level checking has different rules for code/data as well.
+
+11. **Why does code segment descriptor has a readable bit? How can it be non-readable?**
+   - "Execution (instruction fetches) from a code segment is always allowed when the segment is executable, regardless of the value of the readable bit." => from the manual
+   - It prevents mov instructions that try to read from the non-readable code segments.
+   <img src="images/GDT_desc.png" width="500">
+
+
 
 
 

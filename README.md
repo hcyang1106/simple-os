@@ -1506,13 +1506,13 @@ To transfer control from the kernel to a **user process running at privilege lev
 2. **Execute iret Instruction**
 The iret pops the values off the stack in the following order:
 
-EIP → sets the instruction pointer 
-CS → sets the code segment and privilege level 
-EFLAGS → restores flags 
-
-**(If privilege level change is detected)** it also pops: 
-ESP → sets the user-mode stack pointer 
-SS → sets the user-mode stack segment 
+EIP → sets the instruction pointer\  
+CS → sets the code segment and privilege level\  
+EFLAGS → restores flags\ 
+\
+**(If privilege level change is detected)** it also pops:\ 
+ESP → sets the user-mode stack pointer\ 
+SS → sets the user-mode stack segment\ 
 
 ---
 

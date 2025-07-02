@@ -703,6 +703,8 @@ Exceptions are triggered internally by the CPU during instruction execution (e.g
 
 **Both use the IDT to determine how to handle the event** — by jumping to the corresponding handler function defined in the IDT entry. However, the vector (number) for exceptions are usually fixed, which are defined by CPU. Vectors (numbers) for interrupts can vary on the contrary.
 
+Handlers for both **exceptions** **(NOT defined!)** and interrupts are undefined in advance. Defining handlers by users are needed.
+
 ---
 
 ### IDT Overview
@@ -813,7 +815,7 @@ The x86 platform uses **two cascaded 8259 PIC (Programmable Interrupt Controller
 
 1. **Two PIC Chips Are Connected**  
    - PIC1 is connected to PIC0’s IRQ2 line  
-   - This cascade setup expands the number of IRQs from 8 to 16  
+   - This cascade setup expands the number of IRQs from 8 to 15   
 
 2. **Interrupt Numbers Can Be Remapped**  
    - PIC0 is configured to start at interrupt vector `0x20`  
@@ -1391,10 +1393,12 @@ The **Main Task** serves as the **initial user process** that runs after enterin
 
 - **First Running Task**  
   - During system initialization:
+    - Setup the task structure, including **code entry and esp**.  
     - The **main task is assigned as the current task**.
-    - The **TSS (Task State Segment)** of the CPU is loaded with the **main task's TSS**.
+    - The **tr (Task Register)** of the CPU is set to the corresponding number of gdt descriptor, which points to the TSS structure.
     - The **page table** (`cr3` register) is also set to use the **main task’s page directory**, which points to the kernel's identity-mapped space.
-
+    - Allocate 10 pages (other sizes are fine) for main task, and copy the **text and data sections** to user memory space. **Note that the space allocated is larger than the size copied so the remaning spaces are for stack.**
+  - After initialization it jumps to code of main task (main_task_entry), which requires privilege-level switching. This is explained in a later note section.
 ---
 
 
@@ -1502,13 +1506,13 @@ To transfer control from the kernel to a **user process running at privilege lev
 2. **Execute iret Instruction**
 The iret pops the values off the stack in the following order:
 
-EIP → sets the instruction pointer
-CS → sets the code segment and privilege level
-EFLAGS → restores flags
+EIP → sets the instruction pointer 
+CS → sets the code segment and privilege level 
+EFLAGS → restores flags 
 
-**(If privilege level change is detected)** it also pops:
-ESP → sets the user-mode stack pointer
-SS → sets the user-mode stack segment
+**(If privilege level change is detected)** it also pops: 
+ESP → sets the user-mode stack pointer 
+SS → sets the user-mode stack segment 
 
 ---
 
@@ -1563,7 +1567,7 @@ System calls allow user-level processes (CPL = 3) to request services from the k
   ````assembly
   lcall far [selector]  ; selector must point to the call gate descriptor
   ````
-- RPL (Requested Privilege Level) of the selector must be 3 because the calling process is running at CPL = 3.
+- RPL (Requested Privilege Level) of the selector must be 3 because the calling process is running at CPL = 3 (RPL >= CPL).
   - CPU checks max(CPL, RPL) <= DPL of the call gate.
   - So if DPL = 3, and CPL = RPL = 3 → pass.
   - If DPL < max(CPL, RPL) → the call is rejected.
@@ -1584,7 +1588,7 @@ System calls allow user-level processes (CPL = 3) to request services from the k
 
 
 1. **Privilege Level Switch**  
-   When `lcall` is executed, the CPU switches from **privilege level 3 to 0**, using the stack info from the TSS:
+   When `lcall` is executed, the CPU switches from **privilege level 3 to 0** (since switch-to segment is in level 0), using the stack info from the TSS:
    - It switches to the **level 0 stack**
    - Pushes the **previous `SS` and `ESP`** onto the new stack
 
@@ -1695,10 +1699,21 @@ System calls allow user-level processes (CPL = 3) to request services from the k
    - It prevents mov instructions that try to read from the non-readable code segments.
    <img src="images/GDT_desc.png" width="850">
 
+12. **Gates in x86 Protected Mode**
+   - **Gates**, as the name implies, are mechanisms that allow controlled transitions between different **privilege levels** in x86 protected mode.
+   - Currently, I use two types of gates:
+     - **Call Gate** — defined in the **GDT**, used for switching to a higher-privileged code segment via "far call".
+     - **Interrupt Gate** — defined in the **IDT**, used for handling interrupts and exceptions.
+   - DPL Behavior:
+     - The **Descriptor Privilege Level (DPL)** in the IDT specifies the **minimum privilege level required** for **software to invoke** the interrupt via `int N`.
+     - However, **hardware-triggered exceptions or interrupts** **bypass the DPL check** entirely. 
+   - After passing through a gate, the **CPU switches to the privilege level of the target code segment** defined in the gate descriptor.
 
+13. **Features of 80386**
+   - Protected mode, segmentation, paging, priviledge levels available
 
-
-
-
+14. **TSS ss0, esp0 always remain static**
+   - When process works in ring 0 and a context switch occurs, current ss and esp are saved into tss.ss and tss.esp instead of tss.ss0 and tss.esp0.
+   - Therefore, ss0 and esp0 are never changed.
 
 

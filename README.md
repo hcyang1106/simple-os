@@ -1623,6 +1623,36 @@ System calls allow user-level processes (CPL = 3) to request services from the k
 
 ---
 
+### Fork Implementation
+
+The `fork` system call creates a new process by duplicating the calling (parent) process.
+
+<img src="images/fork.png" width="550">
+
+#### 1. **Register Context Copying**
+
+- During a system call, the CPU switches to **ring 0** and stores the user registers on the kernel (ring 0) stack.
+- To fork a process, the kernel **copies the saved register context** from the parent’s kernel stack to the **child’s TSS**.
+
+#### 2. **Memory Duplication**
+
+- Each process must have its **own memory space**.
+- The kernel:
+  - **Creates a new page table** for the child process.
+  - **Copies the memory content** from the parent process to the child’s memory region.
+  - Ensures both processes are now **fully isolated**, despite having identical memory contents after the fork.
+
+#### 3. **Handling Return Values**
+
+- According to the POSIX standard:
+  - The **child process** receives a return value of `0` from `fork`.
+  - The **parent process** receives the **PID of the child**.
+- To achieve this:
+  - The kernel **sets `EAX = 0`** in the **TSS of the child** before it runs.
+  - The **`do_syscall_handler`** writes the child’s PID to `EAX` for the **parent process** right before returning to user mode.
+
+---
+
 ## Additional Notes
 
 1. **`targetArchitecture` in `launch.json`**

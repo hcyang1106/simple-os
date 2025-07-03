@@ -1627,7 +1627,7 @@ System calls allow user-level processes (CPL = 3) to request services from the k
 
 The `fork` system call creates a new process by duplicating the calling (parent) process.
 
-<img src="images/fork.png" width="550">
+<img src="images/fork.png" width="530">
 
 #### 1. **Register Context Copying**
 

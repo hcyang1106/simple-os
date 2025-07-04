@@ -1346,6 +1346,7 @@ int memory_create_map(pde_t *page_dir,
   - Fills in Page Directory Entries (PDE) and Page Table Entries (PTE).
   - Establishes a mapping from the virtual address range (`vstart`) to the physical address range (`pstart`).
   - Applies the specified permissions to the mapped pages.
+  - **Note that if a page table (second-level) isn't allocated, it automatically allocates one** and fills in the mapping.
 
 ---
 
@@ -1354,7 +1355,7 @@ int memory_create_map(pde_t *page_dir,
 The following functions are used to create and configure these page tables:
 
 #### memory_create_uvm()
-Creates the initial page directory and kernel mappings for a user process.
+Creates the initial page directory and kernel mappings for a user process (mapped kernel part, user memory remains unmapped)
 
 - **Allocates a new page directory** for the user process.
 - For kernel space, it does not create new page tables—instead:
@@ -1368,7 +1369,7 @@ int alloc_mem_for_task(uint32_t page_dir,
                        uint32_t vstart, 
                        uint32_t perm);
 ````
-Allocates physical pages and maps them into the user process’s address space.
+Allocates physical pages and maps them into the user process’s address space (for a certain page directory).
 
 - **`page_dir`**: The page directory of the user process.
 - **`page_count`**: Number of pages to allocate.
@@ -1379,7 +1380,33 @@ Allocates physical pages and maps them into the user process’s address space.
 - For user code, the virtual address should be above `0x80000000`, separating user space from kernel space.
 - Each mapping fills in corresponding page directory and page table entries with physical pages allocated for the user.
 - Kernel code/data and user code/data are separated so that they don't interfere each other and we can set different permissions for each one.
+- Note that the system call `execve` uses this many times since **it has to allocate memory for the new program, and allocation for stack space is need as well.**
 
+#### memory_copy_uvm(...)
+The `memory_copy_uvm` function is used to **duplicate a user process's memory space**. Specifically, it:
+
+- Creates and returns a **new page directory**
+- Sets up virtual addresses in the new page directory to match those in the original `page_dir`
+- For each mapped page:
+  - Allocates new **physical memory**
+  - **Copies the content** from the original physical page into the newly allocated one
+
+In effect, the **virtual address mappings are identical**, but each virtual address points to a **separate copy of the physical memory**, not shared with the original. This is essential for process isolation (e.g., in `fork()` system calls).
+
+#### memory_copy_uvm_data(...)
+````c
+int memory_copy_uvm_data(uint32_t to, uint32_t page_dir, uint32_t from, uint32_t size);
+````
+This function copies data from the current process's virtual memory (`from`) to a target virtual address (`to`) in another address space defined by `page_dir`.
+
+- The destination address (`to`) is a virtual address in the target address space, so we must first **translate it to a physical address** using the given page directory.
+- Since **physical memory pages may not be continuous**, we cannot assume a continuous memory block — so the copy must be performed in chunks of one page at a time.
+- For each page:
+   - Translate `to` to its physical address using the page table.
+   - Translate `from` to its physical address (in current address space).
+   - Copy one page or less (whichever size remains).
+   - Repeat until all `size` bytes are copied.
+- Note that This function is used during `execve` to copy exec arguments to created user space.
 
 ---
 
@@ -1653,6 +1680,40 @@ The `fork` system call creates a new process by duplicating the calling (parent)
 
 ---
 
+### `execve` Implementation
+
+The `execve` system call is used to **replace the current process image** with a new executable (typically an ELF file). Here’s how it works step by step:
+
+#### 1. ELF Loading and Page Table Setup
+
+- The ELF file is parsed to **extract its program headers**.
+- A **new page table** is created for the process.
+- The virtual addresses specified in the ELF file are:
+  - **Mapped** to newly allocated physical memory.
+  - **Filled** with the corresponding segments from the ELF file.
+
+#### 2. Register Initialization
+
+- All CPU registers are cleared (set to `0`) except:
+  - `EIP` is set to the ELF **entry point**.
+  - `ESP` is set to the top of the user stack **minus space for syscall parameters**:
+    ```c
+    ESP = stack_top - sizeof(uint32_t) * SYSCALL_PARAM_COUNT
+    ```
+  - This is required because when returning from a system call to ring 3 (via `iret`), the CPU automatically moves the stack pointer by this amount.
+
+#### 3. Passing Arguments (`argc`, `argv`) to the New Program
+
+- To support `cstart(int argc, char **argv)`, we pre-fill the stack with:
+  - A dummy **return address** (just to satisfy calling convention)
+  - The **argument count** `argc`
+  - The **argument vector** `argv`
+- This way, when `cstart()` begins executing, it can retrieve the passed-in arguments directly from the stack.
+
+#### 4. Filling the stack
+
+---
+
 ## Additional Notes
 
 1. **`targetArchitecture` in `launch.json`**
@@ -1746,5 +1807,17 @@ The `fork` system call creates a new process by duplicating the calling (parent)
 14. **TSS ss0, esp0 always remain static**
    - When process works in ring 0 and a context switch occurs, current ss and esp are saved into tss.ss and tss.esp instead of tss.ss0 and tss.esp0.
    - Therefore, ss0 and esp0 are never changed.
+
+15. **Notes About ELF Files**
+   - In general, **function calls cannot directly occur between different ELF files** unless they are **linked together**.
+   - **Manual Jumping**: You can **jump to a specific memory address** (e.g., via function pointers or inline assembly) if you know where another program or function resides in memory.
+   - **Using `execve`**: The `execve` system call **replaces the current process image** with a new program (another ELF file). This is not a function call but rather a full program switch — the current process becomes a new one.
+
+16. **System Calls Code in Userspace**
+   - All **code executed before the `lcall` instruction** in a system call invocation belongs to **userspace**.
+
+
+
+
 
 

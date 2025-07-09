@@ -1684,7 +1684,7 @@ The `fork` system call creates a new process by duplicating the calling (parent)
 
 The `execve` system call is used to **replace the current process image** with a new executable (typically an ELF file). Here’s how it works step by step:
 
-<img src="images/execve.png" width="530">
+<img src="images/execve.png" width="400">
 
 #### 1. ELF Loading and Page Table Setup
 

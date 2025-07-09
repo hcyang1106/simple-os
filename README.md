@@ -1819,6 +1819,9 @@ The `execve` system call is used to **replace the current process image** with a
 16. **System Calls Code in Userspace**
    - All **code executed before the `lcall` instruction** in a system call invocation belongs to **userspace**.
 
+17. **Running ./a.out on command line**
+   - It is doing fork and exec behind.
+   - When a c file is compiled, **it is usually linked with a c startup routine**. The c startup routine typically does initialization (e.g. zeroing bss) and execute exit() at the end.
 
 
 

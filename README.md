@@ -1684,15 +1684,15 @@ The `fork` system call creates a new process by duplicating the calling (parent)
 
 The `execve` system call is used to **replace the current process image** with a new executable (typically an ELF file). Here’s how it works step by step:
 
+<img src="images/execve.png" width="530">
+
 #### 1. ELF Loading and Page Table Setup
 
-- The ELF file is parsed to **extract its program headers**.
-- A **new page table** is created for the process.
-- The virtual addresses specified in the ELF file are:
-  - **Mapped** to newly allocated physical memory.
-  - **Filled** with the corresponding segments from the ELF file.
+- The ELF file is parsed to **extract its program segments** (elf loaded from disk to a chunk of global memory first).
+- A **new page table** is created for the process. When a loadable segment is found, we map the vaddr (specified in phdr) with the newly allocated physical memory, and then fill it using the program segment.
+- Note that if we need to **access a page pointed by another page directory**, **we can't simply use a user-space virtual address to access it**. Instead, we have to find its corresponding physical page first, using the target page directory. 
 
-#### 2. Register Initialization
+#### 2. Register Initialization (Modification is in stack, not in TSS!)
 
 - All CPU registers are cleared (set to `0`) except:
   - `EIP` is set to the ELF **entry point**.
@@ -1711,6 +1711,9 @@ The `execve` system call is used to **replace the current process image** with a
 - This way, when `cstart()` begins executing, it can retrieve the passed-in arguments directly from the stack.
 
 #### 4. Filling the stack
+
+- Utilizes `memory_copy_uvm(...)` to copy the argments to the location right beyond the stack.
+- Note that argv[0], argv[1], etc. does not use `memory_copy_uvm(...)`. We just find the physical address and copy it directly.
 
 ---
 

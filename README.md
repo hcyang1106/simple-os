@@ -1735,6 +1735,18 @@ The `execve` system call is used to **replace the current process image** with a
 
 ---
 
+### Bss for Shell Program
+
+- In the `load_phdr` function (used during ELF loading), we **do not perform `.bss` zeroing**.
+  - This is because we are loading the ELF into a **different page directory** (the new user process).
+  - Zeroing `.bss` here would require **translating virtual addresses to physical addresses** in that target address space, which is nontrivial and not the goal of `load_phdr`.
+
+- Instead, **`.bss` is cleared later in `cstart`**, the entry point of the user program.
+  - Since `cstart` runs in the **user context**, it has access to the correct page table and virtual address space.
+  - Easier to do zeroing.
+
+---
+
 ## Additional Notes
 
 1. **`targetArchitecture` in `launch.json`**

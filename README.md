@@ -1717,6 +1717,24 @@ The `execve` system call is used to **replace the current process image** with a
 
 ---
 
+### About `lib_syscall.c` and `lib_syscall.h`
+
+- `lib_syscall.h` contains only the **declarations** of system calls.
+  - It is **included in user programs** to allow calls like `msleep(...)`, `fork()`, etc.
+
+- `lib_syscall.c` contains the **definitions** of the system calls.
+  - These are **user-space stubs** that prepare arguments and invoke `lcall` to enter kernel space.
+  - This file does **not contain the actual kernel implementation** — only the user-side syscall interface.
+
+- `lib_syscall` is **compiled separately** and can be **linked with any user program** that needs it.
+  - This avoids duplicating syscall code in every user program.
+
+- To properly link this library into the user address space:
+  - The **linker script must place its code** at a virtual address **above `0x80000000`**.
+  - This ensures correct memory mapping in user space.
+
+---
+
 ## Additional Notes
 
 1. **`targetArchitecture` in `launch.json`**
@@ -1823,6 +1841,15 @@ The `execve` system call is used to **replace the current process image** with a
    - It is doing fork and exec behind.
    - When a c file is compiled, **it is usually linked with a c startup routine**. The c startup routine typically does initialization (e.g. zeroing bss) and execute exit() at the end.
 
+---
+
+## C Language Skills
+
+1. To get offset within a page, instead of using mod operation, we can use:
+````c
+uint32_t offset = task->heap_end & (MEM_PAGE_SIZE - 1);
+````
+2. 
 
 
 

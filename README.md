@@ -1747,6 +1747,19 @@ The `execve` system call is used to **replace the current process image** with a
 
 ---
 
+### Newlib and sbrk(int inc)
+  - Note that we link newlib with **shell program** so that in shell we can utilize the c library functions.
+  - In kernel, we only link lib_syscall since main task uses system calls only. Note that main task never goes to cstart function. Only child processes (shell programs) goes through cstart (also starting point).
+  - sbrk is needed while using newlib. `sys_sbrk` returns the **end of the heap before sbrk**, and allocates pages for the requested new space.
+
+---
+
+### Advantages of I/O Buffering
+  - Reduce the number of I/O operations.
+  - Processes don't block while doing I/O (Only if buffer size is large enough).
+
+---
+
 ## Additional Notes
 
 1. **`targetArchitecture` in `launch.json`**
@@ -1852,6 +1865,14 @@ The `execve` system call is used to **replace the current process image** with a
 17. **Running ./a.out on command line**
    - It is doing fork and exec behind.
    - When a c file is compiled, **it is usually linked with a c startup routine**. The c startup routine typically does initialization (e.g. zeroing bss) and execute exit() at the end.
+
+18. **Outputting Messages**
+   - Before entering protected mode, **loader** (loader_16.c) uses **BIOS interrupt** to write to video memory.
+   - After entering protected mode, we utilize serial port to output to **host terminal** (since we link qemu serial with host terminal using qemu command).
+   - Eventually, to output messages in **qemu terminal**, the kernel directly writes to video memory (starting from 0xb800 with 32KB in size). Cursor positions are modified and retrieved by CRT controller, which is one of the peripherals.
+
+19. **Peripherals**
+   - Devices aren't RAM and not on CPU. Communication is done by using I/O ports or memory-mapped I/O.
 
 ---
 

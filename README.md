@@ -719,7 +719,7 @@ What type of gate it is (interrupt gate, trap gate).
 
 What privilege level (DPL) is required to trigger it.
 
-<img src="images/IDT_desc.png" width="500">
+<img src="images/IDT_desc.png" width="600">
 
 ---
 

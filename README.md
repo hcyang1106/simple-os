@@ -719,6 +719,8 @@ What type of gate it is (interrupt gate, trap gate).
 
 What privilege level (DPL) is required to trigger it.
 
+<img src="images/IDT_desc.png" width="500">
+
 ---
 
 ### IDT Together with GDT
@@ -1588,6 +1590,7 @@ System calls allow user-level processes (CPL = 3) to request services from the k
   - The **segment selector** of the target kernel code (typically kernel code segment).
   - The **offset** of the kernel handler function.
   - The **DPL (Descriptor Privilege Level)** of the call gate.
+  - The number of parameters for the system call.
 
 #### 2. **Invoking a System Call from User Process**
 

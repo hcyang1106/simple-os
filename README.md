@@ -1752,7 +1752,7 @@ The `execve` system call is used to **replace the current process image** with a
 
 ### Newlib and sbrk(int inc)
 
-<img src="images/shell_heap.png" width="400">
+<img src="images/shell_heap.png" width="500">
 
   - Note that we link newlib with **shell program** so that in shell we can utilize the c library functions.
   - In kernel, we only link lib_syscall since main task uses system calls only. Note that main task never goes to cstart function. Only child processes (shell programs) goes through cstart (also starting point).

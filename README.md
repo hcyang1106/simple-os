@@ -1799,7 +1799,7 @@ The `execve` system call is used to **replace the current process image** with a
      - Printing **variable values** by name (e.g., `print my_variable`)
 
 7. **How a debugger works (from ChatGPT)**
-   - GDB uses **`fork()` + `ptrace()`** to debug a program.
+   - GDB uses **`fork()` + `execve()` + `ptrace()`** to debug a program.
    - `ptrace()` lets GDB control and observe it.
 
    - **GDB calls `fork()`**
@@ -1885,8 +1885,100 @@ The `execve` system call is used to **replace the current process image** with a
 ````c
 uint32_t offset = task->heap_end & (MEM_PAGE_SIZE - 1);
 ````
-2. 
+2. Encapsulation in C
+   - Separate **interface** (`.h`) and **implementation** (`.c`) files.
+   - ~~Hide internal data/functions by defining them as `static` in the `.c` file.~~
+   (Static is not needed! obj->attr doesn't work already since compiler needs the **definition** to compile into an .o file.)
+   - Example:
+````c
+/* point.h */
+struct Point;
+struct Point* makePoint(double x, double y);
+double getDistance(struct Point *p1, struct Point *p2);
 
+/* point.c */
+#include "point.h"
+#include <stdlib.h>
+#include <math.h>
 
+struct Point {
+    double x, y;
+}
 
+struct Point* makePoint(double x, double y) {
+    struct Point* p = malloc(sizeof(struct Point));
+    p->x = x;
+    p->y = y;
+    return p;
+}
 
+double getDistance(struct Point* p1, struct Point *p2) {
+    double dx = p1->x - p2->x;
+    double dy = p1->y - p2->y;
+    return sqrt(dx*dx + dy*dy);
+}
+````
+
+3. Inheritance in C
+   - Achieved through **struct composition**.
+   - A "child" struct embeds the fields of the "parent" **as its first member**.
+   - Embedding child as the first member enables using (parent *)child as an argument to pass into methods for the parent.
+   - Otherwise child->parent is neeeded. But accessing the details is not guaranteed to work. (due to encapsulation)
+
+````c
+/* labeledPoint.h */
+struct LabeledPoint;
+struct LabeledPoint* makeLabeledPoint(double x, double y, char* label);
+
+void setLabel(struct LabeledPoint *lp, char *label);
+char* getLabel(struct LabeledPoint *lp);
+
+/* labeledPoint.c */
+#include "labeledPoint.h"
+#include <stdlib.h>
+
+struct LabeledPoint {
+    double x, y;
+    char* name;
+};
+
+struct LabeledPoint* makeLabeledPoint(double x, double y, char* label) {
+    struct LabeledPoint* p = malloc(sizeof(struct LabeledPoint));
+    p->x = x;
+    p->y = y;
+    p->name = name;
+    return p;
+}
+
+void setLabel(struct LabeledPoint* lp) {
+    lp->name = name;
+}
+
+char* getLabel(struct LabeledPoint* lp) {
+    return lp->name;
+}
+
+/* main.c */
+#include "point.h"
+#include "labeledPoint.h"
+#include <stdio.h>
+
+int main(int argc, char** argv) {
+    struct LabeledPoint* origin = makeLabeledPoint(0.0, 0.0, "origin");
+    struct LabeledPoint* lowerLeft = makeLabeledPoint(-1.0, -1.0, "lowerLeft");
+    printf("distance = %f\n", getDistance(
+        (struct Point*) origin, (struct Point*) lowerLeft));
+}
+````
+
+4. Polymorphism in C
+   - Without polymorphism, when implementing functions like `open_device()`, you would need to use `if-else` or `switch` statements to check the device type and then call the corresponding `xxx_open()` function:
+  ````c
+  if (device_type == UART) {
+      uart_open();
+  } else if (device_type == DISK) {
+      disk_open();
+  }
+  ````
+   - With polymorphism (via function pointers in a common abstract type like device_t), you can store all devices in a **single array** of device_t* and **simply call dev->open()** without knowing the specific type. This reduces coupling between components.
+   - Inheritance focuses on code reuse (automatically acquires the same functions and attributes) while polymorphism focuses on same function name but different usage.

@@ -1754,6 +1754,7 @@ The `execve` system call is used to **replace the current process image** with a
   - Note that we link newlib with **shell program** so that in shell we can utilize the c library functions.
   - In kernel, we only link lib_syscall since main task uses system calls only. Note that main task never goes to cstart function. Only child processes (shell programs) goes through cstart (also starting point).
   - sbrk is needed while using newlib. `sys_sbrk` returns the **end of the heap before sbrk**, and allocates pages for the requested new space.
+  - Note that heap memory management is managed by userspace program (malloc(), free()). Kernel's reponsibility is to tell user program where the end of the heap is, and allocates required memory for it.
 
 ---
 
@@ -1761,6 +1762,62 @@ The `execve` system call is used to **replace the current process image** with a
   - Reduce the number of I/O operations.
   - Processes don't block while doing I/O (Only if buffer size is large enough).
 
+---
+
+### Console and Keyboard
+
+  - The main interface for interacting with the **output device** (`console_t`) is `console_write(...)`. This function handles writing text to the screen.
+  - The main function for handling **input from the keyboard** is do_handler_kbd(...). This is an **interrupt handler** function triggered by the keyboard interrupt.
+
+---
+
+### Combining Console and Keyboard into TTY
+
+1. **Combining Console and Keyboard**
+
+   - The console device handles **output only**, and the keyboard device handles **input only**.
+   - To support both input and output in one logical unit, we **combine** them into a **TTY (Teletypewriter)** abstraction.
+   - A TTY is treated as a **device** that provides both **input and output** capabilities.
+
+2. **Buffered I/O and Producer-Consumer Problem**
+
+   - We adopt **buffered I/O** by placing **FIFOs (queues)** between producers and consumers:
+     - **Input FIFO** for keyboard to TTY read.
+     - **Output FIFO** for TTY write to console.
+   - Benefits:
+     - **Fewer I/O operations**.
+     - **Non-blocking** behavior for user programs.
+   - This is a **producer-consumer problem**, requiring **two semaphores**:
+     - One for tracking **available data**.
+     - One for tracking **available space**.
+   - For **input**, the **interrupt handler** triggers when data is available (keyboard key pressed), so there is **no busy-wait**, and there's **no need for semaphore** inside the handler.
+
+3. **`tty_open` Initialization**
+   - Initializes:
+     - Input and output **FIFOs**.
+     - **Semaphores** for synchronization.
+     - Underlying **console** and **keyboard** devices.
+
+4. **`tty_write` Logic**
+   - Typically:
+     - Data is put into the **output FIFO**.
+     - Hardware is triggered to **raise an interrupt** to consume the data.
+   - However:
+     - Our **console does not support interrupts**.
+     - So, `tty_write` directly **writes to the console** instead.
+
+5. **`tty_read` Logic**
+   - Reads data from the **input FIFO**.
+   - The **input FIFO** is populated by the **keyboard interrupt handler**: `do_handler_kbd`.
+   - Reading ends when:
+     - A **newline character (`\n`)** is received, or
+     - The **requested byte count** is reached.
+
+6. **Why Two Semaphores Are Needed**
+   - One semaphore tracks the **number of items** in the buffer (to prevent underflow).
+   - One semaphore tracks the **free space** (to prevent overflow).
+   - This ensures correct blocking behavior **without busy-waiting** in user programs.
+   
 ---
 
 ## Additional Notes

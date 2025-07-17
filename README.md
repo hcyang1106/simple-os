@@ -1751,6 +1751,9 @@ The `execve` system call is used to **replace the current process image** with a
 ---
 
 ### Newlib and sbrk(int inc)
+
+<img src="images/shell_heap.png" width="400">
+
   - Note that we link newlib with **shell program** so that in shell we can utilize the c library functions.
   - In kernel, we only link lib_syscall since main task uses system calls only. Note that main task never goes to cstart function. Only child processes (shell programs) goes through cstart (also starting point).
   - sbrk is needed while using newlib. `sys_sbrk` returns the **end of the heap before sbrk**, and allocates pages for the requested new space.
@@ -1817,7 +1820,7 @@ The `execve` system call is used to **replace the current process image** with a
    - One semaphore tracks the **number of items** in the buffer (to prevent underflow).
    - One semaphore tracks the **free space** (to prevent overflow).
    - This ensures correct blocking behavior **without busy-waiting** in user programs.
-   
+
 ---
 
 ## Additional Notes

@@ -1982,3 +1982,15 @@ int main(int argc, char** argv) {
   ````
    - With polymorphism (via function pointers in a common abstract type like device_t), you can store all devices in a **single array** of device_t* and **simply call dev->open()** without knowing the specific type. This reduces coupling between components.
    - Inheritance focuses on code reuse (automatically acquires the same functions and attributes) while polymorphism focuses on same function name but different usage.
+
+5. Retrieve Object Pointer from Embedded Node Pointer
+   - The first way and also an easier way is to embed the node pointer as the first field of the object. We could simply do pointer conversion to get the object pointer:
+  ````c
+  obj_ptr = (obj_t *)node_ptr;
+  ````
+   - Another way is when `node` doesn't locate at the first field, we do:
+  ````c
+  #define offset(node_name, obj_type) ((uint32_t)&(((obj_type *)0)->node_name)) // having outmost parentheses is safer
+  #define _get_obj_ptr(node_name, obj_type, node_ptr) ((obj_type *)(((uint32_t)node_ptr - offset(node_name, obj_type))))
+  #define _get_obj_ptr(node_name, obj_type, node_ptr) (node_ptr ? _get_obj_ptr(node_name, obj_type, node_ptr) : (obj_type *)0)
+  ````

@@ -1992,10 +1992,10 @@ int main(int argc, char** argv) {
   ````c
   // having outmost parentheses is safer
   #define offset(node_name, obj_type) ((uint32_t)&(((obj_type *)0)->node_name))
-  
+
   #define _get_obj_ptr(node_name, obj_type, node_ptr) \
   ((obj_type *)(((uint32_t)node_ptr - offset(node_name, obj_type))))
 
-  #define _get_obj_ptr(node_name, obj_type, node_ptr) \
+  #define get_obj_ptr(node_name, obj_type, node_ptr) \
   (node_ptr ? _get_obj_ptr(node_name, obj_type, node_ptr) : (obj_type *)0)
   ````

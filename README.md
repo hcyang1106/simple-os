@@ -1825,6 +1825,8 @@ The `execve` system call is used to **replace the current process image** with a
 
 ### Benefits of Device Abstraction Layer in OS Design
 
+<img src="images/dev_abs_layer.png" width="400">
+
 #### Without Device Abstraction
 - For external interfaces (e.g., a generic `open()` function):
   - You would have to explicitly check **what type of device** it is (e.g., console, disk, etc.).

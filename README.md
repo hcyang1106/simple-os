@@ -1925,77 +1925,77 @@ double getDistance(struct Point* p1, struct Point *p2) {
    - Embedding child as the first member enables using (parent *)child as an argument to pass into methods for the parent.
    - Otherwise child->parent is neeeded. But accessing the details is not guaranteed to work. (due to encapsulation)
 
-````c
-/* labeledPoint.h */
-struct LabeledPoint;
-struct LabeledPoint* makeLabeledPoint(double x, double y, char* label);
+  ````c
+  /* labeledPoint.h */
+  struct LabeledPoint;
+  struct LabeledPoint* makeLabeledPoint(double x, double y, char* label);
 
-void setLabel(struct LabeledPoint *lp, char *label);
-char* getLabel(struct LabeledPoint *lp);
+  void setLabel(struct LabeledPoint *lp, char *label);
+  char* getLabel(struct LabeledPoint *lp);
 
-/* labeledPoint.c */
-#include "labeledPoint.h"
-#include <stdlib.h>
+  /* labeledPoint.c */
+  #include "labeledPoint.h"
+  #include <stdlib.h>
 
-struct LabeledPoint {
-    double x, y;
-    char* name;
-};
+  struct LabeledPoint {
+      double x, y;
+      char* name;
+  };
 
-struct LabeledPoint* makeLabeledPoint(double x, double y, char* label) {
-    struct LabeledPoint* p = malloc(sizeof(struct LabeledPoint));
-    p->x = x;
-    p->y = y;
-    p->name = name;
-    return p;
-}
+  struct LabeledPoint* makeLabeledPoint(double x, double y, char* label) {
+      struct LabeledPoint* p = malloc(sizeof(struct LabeledPoint));
+      p->x = x;
+      p->y = y;
+      p->name = name;
+      return p;
+  }
 
-void setLabel(struct LabeledPoint* lp) {
-    lp->name = name;
-}
+  void setLabel(struct LabeledPoint* lp) {
+      lp->name = name;
+  }
 
-char* getLabel(struct LabeledPoint* lp) {
-    return lp->name;
-}
+  char* getLabel(struct LabeledPoint* lp) {
+      return lp->name;
+  }
 
-/* main.c */
-#include "point.h"
-#include "labeledPoint.h"
-#include <stdio.h>
+  /* main.c */
+  #include "point.h"
+  #include "labeledPoint.h"
+  #include <stdio.h>
 
-int main(int argc, char** argv) {
-    struct LabeledPoint* origin = makeLabeledPoint(0.0, 0.0, "origin");
-    struct LabeledPoint* lowerLeft = makeLabeledPoint(-1.0, -1.0, "lowerLeft");
-    printf("distance = %f\n", getDistance(
-        (struct Point*) origin, (struct Point*) lowerLeft));
-}
-````
+  int main(int argc, char** argv) {
+      struct LabeledPoint* origin = makeLabeledPoint(0.0, 0.0, "origin");
+      struct LabeledPoint* lowerLeft = makeLabeledPoint(-1.0, -1.0, "lowerLeft");
+      printf("distance = %f\n", getDistance(
+          (struct Point*) origin, (struct Point*) lowerLeft));
+  }
+  ````
 
 4. Polymorphism in C
    - Without polymorphism, when implementing functions like `open_device()`, you would need to use `if-else` or `switch` statements to check the device type and then call the corresponding `xxx_open()` function:
-  ````c
-  if (device_type == UART) {
-      uart_open();
-  } else if (device_type == DISK) {
-      disk_open();
-  }
-  ````
+    ````c
+    if (device_type == UART) {
+        uart_open();
+    } else if (device_type == DISK) {
+        disk_open();
+    }
+    ````
    - With polymorphism (via function pointers in a common abstract type like device_t), you can store all devices in a **single array** of device_t* and **simply call dev->open()** without knowing the specific type. This reduces coupling between components.
    - Inheritance focuses on code reuse (automatically acquires the same functions and attributes) while polymorphism focuses on same function name but different usage.
 
 5. Retrieve Object Pointer from Embedded Node Pointer
    - The first way and also an easier way is to embed the node pointer as the first field of the object. We could simply do pointer conversion to get the object pointer:
-  ````c
-  obj_ptr = (obj_t *)node_ptr;
-  ````
+    ````c
+    obj_ptr = (obj_t *)node_ptr;
+    ````
    - Another way is when `node` doesn't locate at the first field, we do:
-  ````c
-  // having outmost parentheses is safer
-  #define offset(node_name, obj_type) ((uint32_t)&(((obj_type *)0)->node_name))
+    ````c
+    // having outmost parentheses is safer
+    #define offset(node_name, obj_type) ((uint32_t)&(((obj_type *)0)->node_name))
 
-  #define _get_obj_ptr(node_name, obj_type, node_ptr) \
-  ((obj_type *)(((uint32_t)node_ptr - offset(node_name, obj_type))))
+    #define _get_obj_ptr(node_name, obj_type, node_ptr) \
+    ((obj_type *)(((uint32_t)node_ptr - offset(node_name, obj_type))))
 
-  #define get_obj_ptr(node_name, obj_type, node_ptr) \
-  (node_ptr ? _get_obj_ptr(node_name, obj_type, node_ptr) : (obj_type *)0)
-  ````
+    #define get_obj_ptr(node_name, obj_type, node_ptr) \
+    (node_ptr ? _get_obj_ptr(node_name, obj_type, node_ptr) : (obj_type *)0)
+    ````

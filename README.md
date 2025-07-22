@@ -1793,6 +1793,7 @@ The `execve` system call is used to **replace the current process image** with a
    - This is a **producer-consumer problem**, requiring **two semaphores**:
      - One for tracking **available data**.
      - One for tracking **available space**.
+     - Note that both **producer and consumer can operate FIFO at the same time**, so protection is needed.
    - For **input**, the **interrupt handler** triggers when data is available (keyboard key pressed), so there is **no busy-wait**, and there's **no need for semaphore** inside the handler.
 
 3. **`tty_open` Initialization**
@@ -1808,13 +1809,16 @@ The `execve` system call is used to **replace the current process image** with a
    - However:
      - Our **console does not support interrupts**.
      - So, `tty_write` directly **writes to the console** instead.
+   - Note that only one semaphore is used (empty semaphore not needed because of interrupt mechanism).
 
 5. **`tty_read` Logic**
    - Reads data from the **input FIFO**.
+   - Uses semaphore to wait, avoiding busy waiting.
    - The **input FIFO** is populated by the **keyboard interrupt handler**: `do_handler_kbd`.
    - Reading ends when:
      - A **newline character (`\n`)** is received, or
      - The **requested byte count** is reached.
+   - Note that two semaphores are used here, one for empty and one for full.
 
 6. **Why Two Semaphores Are Needed**
    - One semaphore tracks the **number of items** in the buffer (to prevent underflow).
@@ -1875,6 +1879,43 @@ The `execve` system call is used to **replace the current process image** with a
 
 #### Summary
 - This greatly reduces **code coupling**, **redundancy**, and **maintenance burden**.
+
+---
+
+### File System Abstraction Layer
+
+- Similar to the **device abstraction layer**, there exists a **file abstraction layer**.
+- Regular files and devices can all be represented using a **common `file_t` structure**.
+- This design provides a **unified interface** for operations like `read`, `write`, and `close`, regardless of the underlying resource.
+
+1. **Global File Table**
+- The system maintains a **global file table** (similar to the device table).
+- `file_alloc()` searches for and returns an unused `file_t` structure.
+- This global table tracks all open files across the system.
+
+2. **Per-Process File Table**
+- Each process has its own **per-process file descriptor table**.
+- This table stores **pointers to `file_t` structures** that the process is allowed to access.
+- `task_alloc_fd(file_t *file)`  
+  → Scans the current process's file descriptor table for an unused slot, assigns the `file_t *`, and returns the **index** (file descriptor).
+- `task_remove_fd(int fd)`  
+  → Clears the entry at the given index, releasing the association with the file.
+- Note that file system calls returns only `fd` instead of the underlying file structure. Otherwise userspace program could modify it, which is unsafe.
+
+---
+
+### Stdin, Stdout, Stderr
+
+1. File descriptors `0`, `1`, and `2` correspond to `stdin`, `stdout`, and `stderr` respectively. This is defined by the POSIX standard. When the first process is created, these descriptors must be initialized (i.e., bound to valid files). In our OS, this initialization is done at the beginning of each shell.
+
+2. In our implementation, all three file descriptors initially point to the **same file structure** (i.e., same file_t`). To achieve this, we use the `dup(int dup_fd)` function, which duplicates a file descriptor. Specifically, after setting up `stdin` (fd 0), we call `dup(0)` twice to make `stdout` (fd 1) and `stderr` (fd 2) point to the same underlying `file_t` object.
+
+---
+
+### Switching TTYs
+  - To achieve this, we have to make sure `tty_in` sends the character to the specified tty device (using curr_tty).
+  - `console_select(int idx)` displays the corresponding video memory by operating registers of CRT controller.
+  - Update cursor only when `curr_console_idx` equals the specified tty index in `console_write(tty_t *tty)`. Otherwise the current display console's cursor will be moved to another console which is not the displaying.
 
 ---
 
@@ -1991,6 +2032,10 @@ The `execve` system call is used to **replace the current process image** with a
 
 19. **Peripherals**
    - Devices aren't RAM and not on CPU. Communication is done by using I/O ports or memory-mapped I/O.
+
+20. **When Protection is Needed**
+   - **Shared resources** that could be operated by multiple processes, including **I/O ports**.
+   - Therefore, I/O ports operations must be done without being switched.
 
 ---
 

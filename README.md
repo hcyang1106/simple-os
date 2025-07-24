@@ -1769,7 +1769,7 @@ The `execve` system call is used to **replace the current process image** with a
 
 ### Console and Keyboard
 
-  - The main interface for interacting with the **output device** (`console_t`) is `console_write(...)`. This function handles writing text to the screen.
+  - The main interface for interacting with the **output device** (`console_t`) is `console_write(...)`. This function handles writing text to the screen. Note that this one console can be written by multiple processes (parent and its childs), therefore protection is needed.
   - The main function for handling **input from the keyboard** is do_handler_kbd(...). This is an **interrupt handler** function triggered by the keyboard interrupt.
 
 ---
@@ -1906,17 +1906,73 @@ The `execve` system call is used to **replace the current process image** with a
 
 ### Stdin, Stdout, Stderr
 
-1. File descriptors `0`, `1`, and `2` correspond to `stdin`, `stdout`, and `stderr` respectively. This is defined by the POSIX standard. When the first process is created, these descriptors must be initialized (i.e., bound to valid files). In our OS, this initialization is done at the beginning of each shell.
+1. File descriptors `0`, `1`, and `2` correspond to `stdin`, `stdout`, and `stderr` respectively. This is defined by the POSIX standard. When the first process is created, these descriptors must be initialized. In our OS, this initialization is done at the beginning of each shell.
 
-2. In our implementation, all three file descriptors initially point to the **same file structure** (i.e., same file_t`). To achieve this, we use the `dup(int dup_fd)` function, which duplicates a file descriptor. Specifically, after setting up `stdin` (fd 0), we call `dup(0)` twice to make `stdout` (fd 1) and `stderr` (fd 2) point to the same underlying `file_t` object.
+2. In our implementation, all three file descriptors initially point to the **same file structure** (i.e., same `file_t`). To achieve this, we use the `dup(int dup_fd)` function, which duplicates a file descriptor. Specifically, after setting up `stdin` (fd 0), we call `dup(0)` twice to make `stdout` (fd 1) and `stderr` (fd 2) point to the same underlying `file_t` object.
 
 ---
 
 ### Switching TTYs
+
   - To achieve this, we have to make sure `tty_in` sends the character to the specified tty device (using curr_tty).
   - `console_select(int idx)` displays the corresponding video memory by operating registers of CRT controller.
   - Update cursor only when `curr_console_idx` equals the specified tty index in `console_write(tty_t *tty)`. Otherwise the current display console's cursor will be moved to another console which is not the displaying.
 
+---
+
+### Orphan Process
+
+- An **orphan process** is a process whose **parent has terminated**.
+- When this happens, the orphan is **re-parented to the `main_task` process**.
+- This ensures that the system can still manage the child process properly.
+- The `main_task` process will eventually **wait()** for the orphan and clean up its resources after it exits.
+
+---
+
+### Zombie Process
+
+- A **zombie process** is a process that has **finished execution** but still **retains an entry in the process table**.
+- This happens because the **parent hasn't called `wait()`** to retrieve the child's exit status.
+- It holds onto system resources like the PID (and also allocated memory in our implementation) until it's cleaned up.
+- To avoid zombie processes, parents should always `wait()` for their children.
+
+---
+
+### Exit and Wait System Calls
+
+#### `exit` System Call:
+
+1. **Mark Self as Zombie**  
+   - The exiting process changes its state to `TASK_ZOMBIE`.
+   - It is **removed from the ready queue**, so the scheduler will no longer pick it to run.
+
+2. **Wake Up Waiting Parent**  
+   - If the parent process is currently in `TASK_WAITING` state (i.e., it's waiting for child processes), it is moved back to the **ready queue** so it can reclaim resources.
+
+3. **Reparent Child Processes**  
+   - All child processes are reassigned to the **`main_task`** (or `init` task).
+   - If any of those children are already zombies, and `main_task` is in `TASK_WAITING` state, `main_task` is moved to the **ready queue** to reclaim them.
+
+#### `wait` System Call:
+
+1. **Scan for Zombie Children**  
+   - The function loops through the **task table**, looking for any **child processes** that are marked as `TASK_ZOMBIE`.
+
+2. **Reclaim Resources**  
+   - If a zombie child is found:
+     - Free its **user memory**.
+     - Free its **stack memory**.
+     - Free its **task structure**.
+     - `wait` returns immediately after cleaning up one child process.
+
+3. **No Zombie Found?**  
+   - If no zombie is found, the process sets its state to `TASK_WAITING` and is **removed from the ready queue**.
+   - It will be **woken up later** when a child exits and calls `exit`.
+
+4. **One at a Time**  
+   - `wait()` only reclaims **one child** at a time.
+   - It must be called multiple times to reap multiple zombie children.
+   
 ---
 
 ## Additional Notes

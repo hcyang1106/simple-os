@@ -2028,7 +2028,7 @@ file->fs->op->close(...)
    - Reserved Sector Count => Number of Sectors before FAT Table 
    - Sectors per Cluster => A Cluster is Composed of Multiple Sectors 
 - These info can be used to calculate the **starting sector** of the **Root Directory Area** and the **File Data Area**.  
-- **FAT Tables** stores the relationship of the clusters. Each entry is **2 bytes** in size and can be thought of as **the pointer to the next cluster**.  
+- **FAT Tables** stores the relationship of the clusters. Each entry is **2 bytes** in size and can be thought of as **the pointer to the next cluster**. Cluster is used so that the **FAT table wouldn't be too large**.  
 - The second FAT table is for backup usage. 
 - The **Root Directory Area** stores the infos of the files and directories under the root directory. Each entry is **32 bytes large** and stores infos such as **name, attribute, and file size**. 
 - The **File Data Area** stores the file data, and is organized in the unit of **cluster**. 
@@ -2037,6 +2037,15 @@ file->fs->op->close(...)
 
 ### The `fat_t` Structure
 
+- The fat_t structure stores the infos analyzed from **DBR**, and also a `fat_buffer` field which is one page large to prevent unnecessary reads of the same sector.
+- For example, while reading the entries in the Root Directory Area, they might appear in the same sector. If the buffer isn't used then reading the same sector multiple times will be needed, which is very inefficient.
+- `fat_buffer` also act as a role of temporary placement. If a read operation involves reading size less than a cluster size, then the data read should be placed in `fat_buffer` first, and then we further read the wanted data to the specified address.
+- Note that `fatfs_read` reads data **cluster by cluster**. Similar to sectors, if data is less than a cluster size, we still read a cluster first, and then pick the small portion of data we want.
+- `sector_idx` is when fat_buffer is used as a **buffer**, it needs to record which sector it is so that next time it can determine if the wanted data is in the buffer or not.
+- In summary, we only do **sector buffering** (not cluster buffering, for clusters it is just a temporary placement space).
+- `fat_t` is stored in the `data` field of `fs_t`.
+
+---
 
 ## Additional Notes
 

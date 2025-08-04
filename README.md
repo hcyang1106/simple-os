@@ -29,41 +29,31 @@ To build and run the OS on MacOS, you’ll need the following:
 
 | `ld`, `as`, `objcopy`, `objdump`, `readelf` | Tools for ELF analysis and binary conversion |  
 
-| `CMake Tools` and `C/C++ Extension` | Make CMake configs and debugger setup more convenient |
+| `CMake Tools` and `C/C++ Extension` | Make CMake configs (compiler, compile mode) and debugger setup more convenient |
 
   
 
 > Installing `x86_64-elf-gcc` typically includes the full toolchain: assembler, linker, and ELF utilities.
 
-  
-
 ---
-
-  
 
 ## Disk Image Setup
 
-  
 
 ### Disk 1 (Bootable)
 
-  
-
 - Created using `dd`
 
-- Uses precise sector control for:
+- Uses **precise sector control** for:
 
-  - Boot (first 512 bytes)
+  - Boot (bin file, must be first 512 bytes in disk)
 
-  - Loader (second stage bootloader)
+  - Loader (bin file, second stage bootloader)
 
-  - Kernel
+  - Kernel (elf file => see reason in additional notes section)
 
-  
 
 ### Write Script: `script/img-write-os`
-
-  
 
 This script automates writing contents into the disk images (using `dd`)
 
@@ -146,6 +136,8 @@ Attaches a second virtual disk (for file system or user programs).
   - Symbol information
 
   - Debug info (DWARF sections) => Generated when compiled in debug mode
+
+- debugger settings are in launch.json
 
   
 
@@ -255,7 +247,7 @@ Therefore, every boot sector must explicitly reserve space for this signature, a
 
   
 
-To ensure that the linker places the boot code at the correct physical memory address (**`0x7C00`**) and that the boot sector is exactly **512 bytes**, the following CMake configurations are used:
+To ensure that the linker places the boot code at the correct physical memory address (**`0x7C00`**) and that **0x55, 0xAA** are placed at the end of the **512 bytes**, the following CMake configurations are used:
 
   
 
@@ -373,7 +365,7 @@ It begins execution in 16-bit mode and switches to 32-bit protected mode after c
 
 - Loops through all available entries, stopping when BIOS indicates completion
 
-- 0 - Around 600KB, 1MB - 128MB are available memory
+- 0 - Around 600KB, 1MB - 128MB are available memory (unavailable areas are those used by BIOS and VRAM)
 
 - Others parts of memory are reserve for video memory and BIOS
 
@@ -1972,7 +1964,56 @@ The `execve` system call is used to **replace the current process image** with a
 4. **One at a Time**  
    - `wait()` only reclaims **one child** at a time.
    - It must be called multiple times to reap multiple zombie children.
-   
+
+---
+
+## File System
+
+A file system is a method used by an operating system to store, organize, and manage data on storage devices. Specifically, we use FAT16 as the file system.
+
+To make devices available to be accessed through the same interface, we created devfs. However its main usage is just calling dev_open (read, write...) underneath.
+
+<img src="images/file_system_overview.png" width="400">
+
+---
+
+### Entry to File System: `mount`, `sys_open` (`sys_read`, `sys_write`), and `sys_close`
+
+#### 1. `mount`
+
+```c
+static fs_t *mount(fs_type_t type, char *mount_point, int dev_major, int dev_minor);
+```
+
+- Finds an **empty `fs_t` slot** in `fs_table`.
+- Fills in the `fs` structure.
+- Calls `fs->op->mount(...)` to invoke the mount logic for the specific file system type.
+- The created `fs` enables file operations (`open`, `read`, `write`, etc.) to be dispatched properly via the `fs->op->open (read, write...)` table.
+
+#### 2. `sys_open` (sys_read, sys_write are similar)
+
+```c
+int sys_open(const char *name, int flags, ...);
+```
+
+- Creates and initializes a new `file_t` structure.
+- Allocates a file descriptor (fd) and associates it with the `file_t`.
+- Uses the `name` to find the corresponding file system (`fs_t`).
+- Sets `file->fs` so that later `read`, `write`, etc. (where `name` is not passed in, only `file`), can be executed via:
+
+```c
+file->fs->op->read(...)
+```
+
+#### 3. `sys_close`
+
+- Checks the `file->ref` count.
+- Only when `ref` becomes **zero** does it proceed to close the file by calling:
+
+```c
+file->fs->op->close(...)
+```
+
 ---
 
 ## Additional Notes
@@ -2092,6 +2133,14 @@ The `execve` system call is used to **replace the current process image** with a
 20. **When Protection is Needed**
    - **Shared resources** that could be operated by multiple processes, including **I/O ports**.
    - Therefore, I/O ports operations must be done without being switched.
+
+21. **Why not converting kernel.elf to kernel.bin?**
+   - One of the reasons is we can't zero out bss area if it is in bin format. 
+
+22. **Protected Mode**
+   - To my understanding it is **segmentation + privilege levels enabled**
+   - In real mode, segment selector stores **segment address**. Hardware then shifts the address by four bits and add it with offset. It is easy to access other segments by changing values in segment selector and offset.
+   - In protected mode, segment selector stores the index of the target segment in GDT. GDT descriptors have range and privilege level restrictions so that they can protect segments from malicious programs. For example, if selector is changed into a random index, it will be prohibited because of the privilege level restriction. If a large offset is used, it will also be stopped by the range set in the descriptor.
 
 ---
 

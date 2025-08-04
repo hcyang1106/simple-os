@@ -2050,30 +2050,30 @@ file->fs->op->close(...)
 ### `ls` Command Implementation
 
 1. `opendir` and `readdir` Usage
-- The `ls` program starts by calling `opendir(...)` to open a directory and obtain a `DIR*` pointer.
-- It then repeatedly calls `readdir(DIR *dir)` to retrieve directory entries (`struct dirent` structures).
+   - The `ls` program starts by calling `opendir(...)` to open a directory and obtain a `DIR*` pointer.
+   - It then repeatedly calls `readdir(DIR *dir)` to retrieve directory entries (`struct dirent` structures).
 
 2. Current Limitation to Root Directory
-- Currently, the design only supports listing the root directory (`/`), so the path argument in `opendir(...)` is ignored.
-- The implementation of `opendir` simply allocates a `DIR` structure and in kernel it initializes its internal `index` field to 0.
+   - Currently, the design only supports listing the root directory (`/`), so the path argument in `opendir(...)` is ignored.
+   - The implementation of `opendir` simply allocates a `DIR` structure and in kernel it initializes its internal `index` field to 0.
 
 3. `readdir` Kernel-Side Handling
-- The kernel modifies the `DIR` structure to update:
-  - `index` to track the current directory entry
-  - `dirent` to store the current `diritem` result
-- After `readdir` system call returns, user space returns `&dir->dirent`.
-- Note:  
-  - `dirent` is defined in user space  
-  - `diritem` is the internal FAT directory entry structure used by the file system.
+   - The kernel modifies the `DIR` structure to update:
+     - `index` to track the current directory entry
+     - `dirent` to store the current `diritem` result
+   - After `readdir` system call returns, user space returns `&dir->dirent`.
+   - Note:  
+     - `dirent` is defined in user space  
+     - `diritem` is the internal FAT directory entry structure used by the file system.
 
 4. FAT Layer: `fatfs_opendir` and `fatfs_readdir`
-- `fatfs_opendir`: simply sets `index = 0`.
-- `fatfs_readdir`: scans directory entries sequentially until it encounters the FAT end marker.
-- Reading logic:
-  - Each directory entry resides in a sector.
-  - Since multiple entries may share the same sector, FATFS uses a buffer:
-    - If the desired entry is already in the buffer, it reads from memory.
-    - If not, it loads the corresponding sector from disk into the buffer, then reads from it.
+   - `fatfs_opendir`: simply sets `index = 0`.
+   - `fatfs_readdir`: scans directory entries sequentially until it encounters the FAT end marker.
+   - Reading logic:
+     - Each directory entry resides in a sector.
+     - Since multiple entries may share the same sector, FATFS uses a buffer:
+       - If the desired entry is already in the buffer, it reads from memory.
+       - If not, it loads the corresponding sector from disk into the buffer, then reads from it.
 
 ---
 

@@ -2018,20 +2018,20 @@ file->fs->op->close(...)
 
 ### FAT16 Introduction
 
-<img src="images/FAT16_structure.png" width="400">
+<img src="images/FAT16_structure.png" width="650">
 
-- **DBR** area stores the **overall information** of the FAT16 file system, including:
-   - Bytes per Sector
-   - FAT Table Sector Count
-   - Number of FAT Tables
-   - Number of Root Dir Area Entries
-   - Reserved Sector Count => Number of Sectors before FAT Table
-   - Sectors per Cluster => A Cluster is Composed of Multiple Sectors
-- These info can be used to calculate the **starting sector** of the **Root Directory Area** and the **File Data Area**
-- **FAT Tables** stores the relationship of the clusters. Each entry is **2 bytes** in size and can be thought of as **the pointer to the next cluster**.
-- The second FAT table is for backup usage.
-- The **Root Directory Area** stores the infos of the files and directories under the root directory. Each entry is **32 bytes large** and stores infos such as **name, attribute, and file size**.
-- The **File Data Area** stores the file data, and is organized in the unit of **cluster**.
+- **DBR** area stores the **overall information** of the FAT16 file system, including: 
+   - Bytes per Sector 
+   - FAT Table Sector Count 
+   - Number of FAT Tables 
+   - Number of Root Dir Area Entries 
+   - Reserved Sector Count => Number of Sectors before FAT Table 
+   - Sectors per Cluster => A Cluster is Composed of Multiple Sectors 
+- These info can be used to calculate the **starting sector** of the **Root Directory Area** and the **File Data Area**.  
+- **FAT Tables** stores the relationship of the clusters. Each entry is **2 bytes** in size and can be thought of as **the pointer to the next cluster**.  
+- The second FAT table is for backup usage. 
+- The **Root Directory Area** stores the infos of the files and directories under the root directory. Each entry is **32 bytes large** and stores infos such as **name, attribute, and file size**. 
+- The **File Data Area** stores the file data, and is organized in the unit of **cluster**. 
 
 ---
 

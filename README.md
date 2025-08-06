@@ -2102,15 +2102,15 @@ file->fs->op->close(...)
 
 4. `fgets` and `fatfs_read`
 - `fgets` reads file data by calling `fatfs_read(...)`.
-- FAT16 reads files **by cluster**, so `fatfs_read` must handle:
-  a. **Full cluster reads**:
+- FAT16 reads files **by cluster**, so `fatfs_read` must handle: 
+   a. **Full cluster reads**:
      - If the read size covers the full cluster, data is read directly into the target buffer.
   
-  b. **Partial cluster reads**:
+   b. **Partial cluster reads**:
      - Read the full cluster into `fat_buffer`
      - Then copy only the needed portion from `fat_buffer` to the target buffer
      - This is due to the FAT16 constraint of reading by whole clusters
-     - ⚠️ Can be optimized in the future
+     - **Can be optimized in the future**
 
 5. Updating File State:
 - After each read, `move_file_pos(...)` is called:

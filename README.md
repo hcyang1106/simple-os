@@ -2120,6 +2120,38 @@ file->fs->op->close(...)
 
 ---
 
+### `ioctl` Implementation Notes
+
+#### 1. Why `ioctl` is Needed
+   - When implementing features like `less -l filename`, we want to **control device behavior from user space**.
+   - Example: Pressing the `n` key to scroll **should not display** the character `n` on the console.
+   - This requires a way to **configure device settings** from user programs — and that’s what `ioctl` provides.
+
+#### 2. `ioctl` Implementation Flow
+
+1. **System Call Addition**:
+   - Add `ioctl` to the list of system calls.
+   - User program calls `ioctl(int fd, int cmd, ...)`.
+
+2. **Kernel Handler**:
+   - The call enters the kernel and is handled by `sys_ioctl`.
+
+3. **File System Dispatch**:
+   - `ioctl` uses the file descriptor `fd` to find the corresponding file structure.
+   - The file structure has a reference to its **file system**, therefore a new function pointer `ioctl` is needed.
+
+4. **FS Layer Call**:
+   - `sys_ioctl` calls `fs->ioctl(...)`.
+
+5. **Device FS Handling**:
+   - In the `devfs_ioctl(...)` implementation, we simply call to `dev_control(...)`.
+
+6. **Device Dispatch**:
+   - `dev_control` determines the specific device and forwards the call to the device's control function.
+   - For example, if it's a TTY, it calls `tty_control(...)`, where the actual device-specific logic is implemented.
+
+---
+
 ## Additional Notes
 
 1. **`targetArchitecture` in `launch.json`**
@@ -2254,7 +2286,7 @@ file->fs->op->close(...)
 ````c
 uint32_t offset = task->heap_end & (MEM_PAGE_SIZE - 1);
 ````
-2. Encapsulation in C
+2. **Encapsulation in C**
    - Separate **interface** (`.h`) and **implementation** (`.c`) files.
    - ~~Hide internal data/functions by defining them as `static` in the `.c` file.~~
    (Static is not needed! obj->attr doesn't work already since compiler needs the **definition** to compile into an .o file.)
@@ -2288,7 +2320,7 @@ double getDistance(struct Point* p1, struct Point *p2) {
 }
 ````
 
-3. Inheritance in C
+3. **Inheritance in C**
    - Achieved through **struct composition**.
    - A "child" struct embeds the fields of the "parent" **as its first member**.
    - Embedding child as the first member enables using (parent *)child as an argument to pass into methods for the parent.
@@ -2340,7 +2372,7 @@ double getDistance(struct Point* p1, struct Point *p2) {
   }
   ````
 
-4. Polymorphism in C
+4. **Polymorphism in C**
    - Without polymorphism, when implementing functions like `open_device()`, you would need to use `if-else` or `switch` statements to check the device type and then call the corresponding `xxx_open()` function:
     ````c
     if (device_type == UART) {
@@ -2352,7 +2384,7 @@ double getDistance(struct Point* p1, struct Point *p2) {
    - With polymorphism (via function pointers in a common abstract type like device_t), you can store all devices in a **single array** of device_t* and **simply call dev->open()** without knowing the specific type. This reduces coupling between components.
    - Inheritance focuses on code reuse (automatically acquires the same functions and attributes) while polymorphism focuses on same function name but different usage.
 
-5. Retrieve Object Pointer from Embedded Node Pointer
+5. **Retrieve Object Pointer from Embedded Node Pointer**
    - The first way and also an easier way is to embed the node pointer as the first field of the object. We could simply do pointer conversion to get the object pointer:
     ````c
     obj_ptr = (obj_t *)node_ptr;
@@ -2368,3 +2400,7 @@ double getDistance(struct Point* p1, struct Point *p2) {
     #define get_obj_ptr(node_name, obj_type, node_ptr) \
     (node_ptr ? _get_obj_ptr(node_name, obj_type, node_ptr) : (obj_type *)0)
     ````
+6. Flipping a Certain Bit
+   - First shift the certain bit to the correct position, for example, `flag = 1 << 6`.
+   - Next, flip the bit to one by doing `settings |= flag`.
+   - Flip the bit to zero by doing `settings &= ~flag`.

@@ -2103,6 +2103,7 @@ file->fs->op->close(...)
 4. `fgets` and `fatfs_read`
 - `fgets` reads file data by calling `fatfs_read(...)`.
 - FAT16 reads files **by cluster**, so `fatfs_read` must handle: 
+   
    a. **Full cluster reads**:
      - If the read size covers the full cluster, data is read directly into the target buffer.
   

@@ -2043,7 +2043,7 @@ file->fs->op->close(...)
 - Note that `fatfs_read` reads data **cluster by cluster**. Similar to sectors, if data is less than a cluster size, we still read a cluster first, and then pick the small portion of data we want.
 - `sector_idx` is when fat_buffer is used as a **buffer**, it needs to record which sector it is so that next time it can determine if the wanted data is in the buffer or not.
 - In summary, we only do **sector buffering** (not cluster buffering, for clusters it is just a temporary placement space).
-- `fat_t` is stored in the `data` field of `fs_t`.
+- `fat_t` is stored in the `data` field of `fs_t`, and is initialized in `fatfs_mount`.
 
 ---
 
@@ -2074,6 +2074,48 @@ file->fs->op->close(...)
      - Since multiple entries may share the same sector, FATFS uses a buffer:
        - If the desired entry is already in the buffer, it reads from memory.
        - If not, it loads the corresponding sector from disk into the buffer, then reads from it.
+
+---
+
+### `less` Command Implementation
+
+1. User Program Logic
+- The user program primarily calls:
+  - `fopen(...)` to open the file
+  - `fgets(...)` to read each line
+  - `fputs(...)` to print output to screen
+
+2. `fopen` and `fatfs_open`
+- `fopen` eventually calls `fatfs_open(...)`, which:
+  - Iterates through the **root directory** to find the matching filename
+  - Parses the corresponding entry and fills in the `file_t` structure
+
+3. Important Fields in `file_t`:
+- `sblk`: Starting cluster of the file
+- `cblk`: Current cluster (used for reading state)
+- `pos`: Current position in the file
+- `p_index`: Index in the root directory (for metadata update)
+- `size`: File size in bytes
+
+> 🔸 Note: Unlike `fatfs_opendir`, which fills a `dirent` structure,  
+> `fatfs_open` fills in a full `file_t` with detailed state tracking.
+
+4. `fgets` and `fatfs_read`
+- `fgets` reads file data by calling `fatfs_read(...)`.
+- FAT16 reads files **by cluster**, so `fatfs_read` must handle:
+  a. **Full cluster reads**:
+     - If the read size covers the full cluster, data is read directly into the target buffer.
+  
+  b. **Partial cluster reads**:
+     - Read the full cluster into `fat_buffer`
+     - Then copy only the needed portion from `fat_buffer` to the target buffer
+     - This is due to the FAT16 constraint of reading by whole clusters
+     - ⚠️ Can be optimized in the future
+
+5. Updating File State:
+- After each read, `move_file_pos(...)` is called:
+  - Updates `pos` (file position)
+  - May update `cblk` (current cluster) if the read crosses into a new cluster
 
 ---
 

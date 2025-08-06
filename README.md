@@ -2097,7 +2097,7 @@ file->fs->op->close(...)
 - `p_index`: Index in the root directory (for metadata update)
 - `size`: File size in bytes
 
-> 🔸 Note: Unlike `fatfs_opendir`, which fills a `dirent` structure,  
+> Note: Unlike `fatfs_opendir`, which fills a `dirent` structure,  
 > `fatfs_open` fills in a full `file_t` with detailed state tracking.
 
 4. `fgets` and `fatfs_read`

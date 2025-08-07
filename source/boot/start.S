@@ -24,7 +24,7 @@ _start:
 	mov %ax, %gs
 
 	// set the memory before 0x7c00 as stack space
-	mov $_start, %esp
+	mov $_start, %esp // low 16 bits of esp is sp
 
 read_loader:
 	// uses BIOS interrupt to read from disk
@@ -45,8 +45,8 @@ read_loader:
 	// jump to the same location, so it stucks here
 	jmp .
 
-	// set the last two bytes to 0x55, 0xaa (boot_end is set to 0x7dfe in CMakeLists.txt)
-	// section is used to define a new segment
-	// a means allocatable (allocates memory for the segment), x means executable (TODO: can be removed?)
-	.section boot_end, "ax"
+// set the last two bytes to 0x55, 0xaa (boot_end is set to 0x7dfe in CMakeLists.txt)
+// section is used to define a new segment
+// a means allocatable (allocates memory for the segment), x means executable (TODO: can be removed?)
+.section boot_end, "ax"
 boot_sig: .byte 0x55, 0xaa

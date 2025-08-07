@@ -2014,6 +2014,12 @@ file->fs->op->read(...)
 file->fs->op->close(...)
 ```
 
+#### 4. File System Protection
+
+- Note that the content stored in FAT16 file system could be written, therefore, there should be mutex protection.
+- fs_protect(fp->fs) before fs->op->(certain_operation) and fs_unprotect(fp->fs) after them.
+
+
 ---
 
 ### FAT16 Introduction
@@ -2286,6 +2292,12 @@ file->fs->op->close(...)
    - Using gcc command automatically hands over the output to assembler/linker with some automatically added arguments used.
    - Basically they are the same. It's just gcc could done it for you and `as` requires more manual setups.
 
+25. **About Linking**
+   - User programs (such as shell) needs libapp and newlib to be linked together.
+   - main_task (in kernel) needs to link libapp.
+   - However, some libapp functions use newlib functions (e.g. malloc, free), so we replicate functions only used by main_task under the kernel/init folder
+   - Therefore linkage of libapp isn't needed anymore for kernel, and there is a copy of the subset of libapp functions in kernel/init
+   
 ---
 
 ## C Language Skills

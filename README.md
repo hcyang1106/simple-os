@@ -2282,6 +2282,10 @@ file->fs->op->close(...)
    - CPU caches GDT descriptors, which cannot be seen by programmers. In order to update the cache we can do `mov %ax, %ds` to update the cache. For CS selector, we have to do a far jump (`ljmp`) instead.
    - After GDT is updated, the cache has to be updated to prevent using the old values.
 
+24. **Differences between using `as` (or `ld`) vs. gcc**
+   - Using gcc command automatically hands over the output to assembler/linker with some automatically added arguments used.
+   - Basically they are the same. It's just gcc could done it for you and `as` requires more manual setups.
+
 ---
 
 ## C Language Skills

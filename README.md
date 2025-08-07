@@ -2296,8 +2296,11 @@ file->fs->op->close(...)
    - User programs (such as shell) needs libapp and newlib to be linked together.
    - main_task (in kernel) needs to link libapp.
    - However, some libapp functions use newlib functions (e.g. malloc, free), so we replicate functions only used by main_task under the kernel/init folder
-   - Therefore linkage of libapp isn't needed anymore for kernel, and there is a copy of the subset of libapp functions in kernel/init
-   
+   - Therefore linkage of libapp isn't needed anymore for kernel, and there is a copy of the subset of libapp functions in kernel/init.
+
+26. **Disk Preparation**
+   - All elf files (or bin files) are copied to the `image` folder first, and based on whichever disk they belong to, they are either dd or cp into the disks (dd for disk1 and cp for disk2).
+
 ---
 
 ## C Language Skills

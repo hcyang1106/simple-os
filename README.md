@@ -2428,13 +2428,13 @@ double getDistance(struct Point* p1, struct Point *p2) {
     #define get_obj_ptr(node_name, obj_type, node_ptr) \
     (node_ptr ? _get_obj_ptr(node_name, obj_type, node_ptr) : (obj_type *)0)
     ````
-6. Flipping a Certain Bit
+6. **Flipping a Certain Bit**
    - First shift the certain bit to the correct position, for example, `flag = 1 << 6`.
    - Next, flip the bit to one by doing `settings |= flag`.
    - Flip the bit to zero by doing `settings &= ~flag`.
    - Inversing a bit (1->0, 0->1) by doing `settings ^= flag`.
 
-7. Volatile Keyword
+7. **Volatile Keyword**
    - In C, compiler sometimes optimizes for you.
    - For example, UART_STATUS is a register, and from compiler's view it doesn't change in the loop. So it might make just check once to prevent checking the value for every single loop (as the code below).
     ````c 
@@ -2450,3 +2450,8 @@ double getDistance(struct Point* p1, struct Point *p2) {
     ````
    - Other situations include a shared variable between multiple threads, from compiler's view it might not know the variable may be changed so it make it fixed to prevent accessing each time.
   
+8. **Caller-saved and Callee-saved registers (Defined by ABI)**
+   - ABI defines caller-saved/callee-saved registers, return value register, and how to pass in parameters (use stack or specific regs).
+   - Caller-saved registers should be saved by caller **before calling callee**, **if the those regs will be used after calling callee**.
+   - Callee-saved registers should be saved by callee, if those registers will be used (overwritten).
+   - Parameter passing could vary in different ways: in 32-bit system they use stack and ebp to locate the parameters, while in 64-bit system they fix the parameters on specific registers (first param copied to rdi, second copied to rsi, etc.).

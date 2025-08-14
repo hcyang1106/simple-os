@@ -2452,6 +2452,6 @@ double getDistance(struct Point* p1, struct Point *p2) {
   
 8. **Caller-saved and Callee-saved registers (Defined by ABI)**
    - ABI defines caller-saved/callee-saved registers, return value register, and how to pass in parameters (use stack or specific regs).
-   - Caller-saved registers should be saved by caller **before calling callee**, **if the those regs will be used after calling callee**.
-   - Callee-saved registers should be saved by callee, if those registers will be used (overwritten).
+   - Caller-saved registers should be saved by caller **before calling callee**, **if those regs will be used after calling callee**.
+   - Callee-saved registers should be saved by callee, **if those registers will be used (overwritten) in callee**.
    - Parameter passing could vary in different ways: in 32-bit system they use stack and ebp to locate the parameters, while in 64-bit system they fix the parameters on specific registers (first param copied to rdi, second copied to rsi, etc.).

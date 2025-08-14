@@ -2301,6 +2301,11 @@ file->fs->op->close(...)
 26. **Disk Preparation**
    - All elf files (or bin files) are copied to the `image` folder first, and based on whichever disk they belong to, they are either dd or cp into the disks (dd for disk1 and cp for disk2).
 
+27. **Threads**
+   - Why is thread lightweight? => Take a look at the code of fork(). It allocates memory for the new process and copies all the memory content from the parent process, which is really time consuming.
+   - However in threads, the most time consuming part (from my understanding) is the allocation of stack. Threads use the same page table as the parent process and all the other code/data/heap/fds are already there.
+   - Note that threads seem to be able to access other threads' stacks since they are using the same page table (this is what chatGPT said though, not sure what the real implementation does).
+
 ---
 
 ## C Language Skills
@@ -2427,3 +2432,21 @@ double getDistance(struct Point* p1, struct Point *p2) {
    - First shift the certain bit to the correct position, for example, `flag = 1 << 6`.
    - Next, flip the bit to one by doing `settings |= flag`.
    - Flip the bit to zero by doing `settings &= ~flag`.
+   - Inversing a bit (1->0, 0->1) by doing `settings ^= flag`.
+
+7. Volatile Keyword
+   - In C, compiler sometimes optimizes for you.
+   - For example, UART_STATUS is a register, and from compiler's view it doesn't change in the loop. So it might make just check once to prevent checking the value for every single loop (as the code below).
+    ````c 
+    volatile unsigned int *UART_STATUS = (unsigned int*)0x4000;
+    while (!(*UART_STATUS & 0x01)) {
+
+    }
+    // optimized version
+    tmp = *UART_STATUS;
+    while (!(tmp & 0x01)) {
+
+    }
+    ````
+   - Other situations include a shared variable between multiple threads, from compiler's view it might not know the variable may be changed so it make it fixed to prevent accessing each time.
+  

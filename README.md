@@ -2306,6 +2306,13 @@ file->fs->op->close(...)
    - However in threads, the most time consuming part (from my understanding) is the allocation of stack. Threads use the same page table as the parent process and all the other code/data/heap/fds are already there.
    - Note that threads seem to be able to access other threads' stacks since they are using the same page table (this is what chatGPT said though, not sure what the real implementation does).
 
+28. **Data Passing Between Kernel and User Space
+   - In our OS, a process uses eax register to pass data from kernel space to user space.
+   - On the other hand, to pass parameters from user space to kernel space, we utilize the feature of hardware, which is capable of copying parameters from stack level 3 to stack level 0.
+   - However, in some cases there may be needs to copy data from kernel to user space, or the other way around. Some OS provides copy_in/copy_out functions in kernel, basically passing in target process's page table and the destination address as input, walking through the target page table to find data in physical memory and copy it.
+   - (From ChatGPT) For example, gdb might need to copy data from target process to get the **variable values**. And it might also want to **set a variable value** for the target process, therefore it needs both copy_in and copy_out.
+   - (To my understanding) So basically there are two ways of passing data. One is passing through regs and the other is finding the real physical data using target proces page table.
+
 ---
 
 ## C Language Skills

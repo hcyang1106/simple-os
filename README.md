@@ -1683,8 +1683,10 @@ The `execve` system call is used to **replace the current process image** with a
 
 #### 1. ELF Loading and Page Table Setup
 
-- The ELF file is parsed to **extract its program segments** (elf loaded from disk to a chunk of global memory first).
-- A **new page table** is created for the process. When a loadable segment is found, we map the vaddr (specified in phdr) with the newly allocated physical memory, and then fill it using the program segment.
+~~- The ELF file is parsed to extract its program segments (elf loaded from disk to a chunk of global memory first).~~
+- After completion of the file system, we are able to read elf files directly from disk. We use sys_open, sys_read, sys_lseek to read ehdr and phdrs.
+- A **new page table** is created for the process. When a loadable segment is found, we allocate memory for the address specified in phdr.
+- And then we use sys_read, sys_lseek to read contents to the **physical memory address, which is also the virtual memory address**.
 - Note that if we need to **access a page pointed by another page directory**, **we can't simply use a user-space virtual address to access it**. Instead, we have to find its corresponding physical page first, using the target page directory. 
 
 #### 2. Register Initialization (Modification is in stack, not in TSS!)
@@ -2462,3 +2464,15 @@ double getDistance(struct Point* p1, struct Point *p2) {
    - Caller-saved registers should be saved by caller **before calling callee**, **if those regs will be used after calling callee**.
    - Callee-saved registers should be saved by callee, **if those registers will be used (overwritten) in callee**.
    - Parameter passing could vary in different ways: in 32-bit system they use stack and ebp to locate the parameters, while in 64-bit system they fix the parameters on specific registers (first param copied to rdi, second copied to rsi, etc.).
+
+9. **Variables Stored Locations**
+   - Constants and strings are stored in .rodata section
+   - ````c 
+     char str[] = "string"
+     ````
+     For this line of code, str is in stored in stack and "string" is stored in .rodata.
+   - A const variable should always be initialized, which makes sence because it is not stored in .bss and we need a value to initialize it.
+   - (From ChatGPT) However, **const local variables are stored in stack** (so that they can be popped out after execution of function), and are **not protected by the hardware.**
+
+10. **Find the Least Set Bit Value**
+   - `x & -x` is able to find the least set bit value (0b1100 => returns 0b0100)

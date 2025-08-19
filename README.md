@@ -2476,3 +2476,7 @@ double getDistance(struct Point* p1, struct Point *p2) {
 
 10. **Find the Least Set Bit Value**
    - `x & -x` is able to find the least set bit value (0b1100 => returns 0b0100)
+
+11. **Struct Size Calculation**
+   - Members are arranged in declaration order, and the starting offset of each member must be a multiple of its alignment.
+   - The overall size of the structure must be padded to a multiple of the maximum member alignment.

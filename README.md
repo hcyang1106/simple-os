@@ -2038,7 +2038,7 @@ file->fs->op->close(...)
 - These info can be used to calculate the **starting sector** of the **Root Directory Area** and the **File Data Area**.  
 - **FAT Tables** stores the relationship of the clusters. Each entry is **2 bytes** in size and can be thought of as **the pointer to the next cluster**. Cluster is used so that the **FAT table wouldn't be too large**.  
 - The second FAT table is for backup usage. 
-- The **Root Directory Area** stores the infos of the files and directories under the root directory. Each entry is **32 bytes large** and stores infos such as **name, attribute, and file size**. 
+- The **Root Directory Area** stores the infos of the files and directories under the root directory. Each entry is **32 bytes large** and stores infos such as **name, attribute, file size, and first cluster number info**. 
 - The **File Data Area** stores the file data, and is organized in the unit of **cluster**. 
 
 ---
@@ -2308,12 +2308,16 @@ file->fs->op->close(...)
    - However in threads, the most time consuming part (from my understanding) is the allocation of stack. Threads use the same page table as the parent process and all the other code/data/heap/fds are already there.
    - Note that threads seem to be able to access other threads' stacks since they are using the same page table (this is what chatGPT said though, not sure what the real implementation does).
 
-28. **Data Passing Between Kernel and User Space
+28. **Data Passing Between Kernel and User Space**
    - In our OS, a process uses eax register to pass data from kernel space to user space.
    - On the other hand, to pass parameters from user space to kernel space, we utilize the feature of hardware, which is capable of copying parameters from stack level 3 to stack level 0.
    - However, in some cases there may be needs to copy data from kernel to user space, or the other way around. Some OS provides copy_in/copy_out functions in kernel, basically passing in target process's page table and the destination address as input, walking through the target page table to find data in physical memory and copy it.
    - (From ChatGPT) For example, gdb might need to copy data from target process to get the **variable values**. And it might also want to **set a variable value** for the target process, therefore it needs both copy_in and copy_out.
    - (To my understanding) So basically there are two ways of passing data. One is passing through regs and the other is finding the real physical data using target proces page table.
+
+29. **fatfs_read and fatfs_write**
+   - Note that the basic read/write unit is cluster.
+   - That is, in our design we can't read or write on a certain sector (I think we can but the code follows the rule).
 
 ---
 
@@ -2480,3 +2484,12 @@ double getDistance(struct Point* p1, struct Point *p2) {
 11. **Struct Size Calculation**
    - Members are arranged in declaration order, and the starting offset of each member must be a multiple of its alignment.
    - The overall size of the structure must be padded to a multiple of the maximum member alignment.
+
+12. **Why is This Bad?**
+   - #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+   - Because if you write MIN(i++, j++), you might think i and j will be increment by one only. But it will actually be done twice.
+
+13. **C Sequence Points**
+   - It means **before these points**, the increment of i++ will be done.
+   - Therefore if you read and write (i++) in the same sequence period, it causes **undefined behavior**.
+
